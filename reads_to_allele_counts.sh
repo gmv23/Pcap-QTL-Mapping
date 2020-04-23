@@ -35,8 +35,19 @@ if [ ! -d trimming ]; then
 	#Run fastp in parallel on all reads
 	cp "$SCRIPTS"/trim.sh .
 	mkdir trimmed_reads
-
 	bash trim.sh read_paths.txt trimmed_reads > trimming.log
+
 	cd ..
 fi
+
+if [ ! -d alignments ]; then
+	mkdir alignments
+	cd alignments
+	cp "$SCRIPTS"/align.sh .
+	mkdir bam_files
+	bash align.sh ../trimming/trimmed_reads > align.log
+	cd ..
+fi
+
+
 
