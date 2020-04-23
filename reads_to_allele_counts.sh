@@ -49,5 +49,15 @@ if [ ! -d alignments ]; then
 	cd ..
 fi
 
+if [ ! -d variants ]; then
+	mkdir variants
+	cd variants
+
+	mkdir bcf_files
+	cp "$SCRIPTS"/call_variants.sh .
+	bash call_variants.sh ../alignments/bam_files > call_variants.log
+	cd ..
+fi
+
 
 
