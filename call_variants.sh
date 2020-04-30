@@ -36,4 +36,8 @@ cd bcf_files
 bcftools concat -f bcf_chrom_files.txt -O b --threads 24 -o final_allchrom.bcf
 
 # Now call variants on pileup file 
-bcftools call -c -v -V indels --threads 24 -O v -o final_geno.vcf final_allchrom.bcf
+bcftools call -c -v --threads 24 -O v -o final_geno.vcf final_allchrom.bcf
+
+#Now filter to get two files:
+#One with only SNPs for BSA
+#One with Snps AND indels, filtered based on depth
