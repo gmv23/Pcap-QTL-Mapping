@@ -6,7 +6,7 @@
 
 set -e
 
-SCRIPTS='/workdir/gmv23/squashQTL/Pcap-QTL-Mapping'
+SCRIPTS='/workdir/gmv23/squashQTL/Pcap-QTL-Mapping/BSA_bioinformatics'
 
 if [ -z $1 ]; then
         DATE=$(date +%F)
