@@ -103,4 +103,4 @@ for(chrom in unique(counts.bi.c1$CHROM)){
 }
 
 #Also write filtered, re-coded, and collapsed counts file
-write.table(counts.bi.c1, "data/counts_filtered.txt", quote=F, row.names = F, col.names = F)
+write.table(counts.bi.c1, "data/counts_filtered.txt", quote=F, row.names = F, col.names = T)
