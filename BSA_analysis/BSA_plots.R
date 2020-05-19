@@ -58,9 +58,10 @@ plot_lg <- function(allele_freqs, #data frame with column for CHROM, POS, and fo
                     scaffold_sizes, #data frame where first column is CHROM, second column is chrom length
                     chrom, #which chrom to plot
                     rep, #which rep to plot
-                    window_size = 1000000, #window size for smooothing
+                    window_size = 500000, #window size for smooothing
                     step_size = 100000, #step_size for smoothing
                     min_snps = 30, #if a given window has fewer than this many snps, write NA
+                    trim_percent = 1, #Show this proportion of SNPs as dots on the plot
                     plot_arguments = list(), #arguments to pass to plot
                     return_smoothed = F, #If true, return data frame with window smoothed estimates
                     make_plot = T, #whether or not to plot
@@ -114,6 +115,10 @@ plot_lg <- function(allele_freqs, #data frame with column for CHROM, POS, and fo
       pool_columns <- 5:7
     }
     
+    #Get random subset for plotting if trim_percent < 1
+    allele_freqs.lg <- allele_freqs.lg[sample(nrow(allele_freqs.lg), size = round(trim_percent*nrow(allele_freqs.lg)), replace = F),]
+    
+    
     #Turn from wide to long
     allele_freqs.long <- melt(allele_freqs.lg, id.vars=1:2, variable.name = "pool", measure.vars = pool_columns)
     allele_freqs.long <- allele_freqs.long[order(allele_freqs.long$POS),]
@@ -127,7 +132,7 @@ plot_lg <- function(allele_freqs, #data frame with column for CHROM, POS, and fo
     total_plot_arguments <- list(x = allele_freqs.long$POS,
                                  y = allele_freqs.long$value,
                                  col = allele_freqs.long$color,
-                                 pch = 3, cex=0.6, ylim=c(0.2,0.8),
+                                 pch = 3, cex=0.4, ylim=c(0.2,0.8),
                                  xlab = "Position (BP)", ylab = "Frequency Pc-NY21 allele",
                                  xaxt = 'n', yaxt='n')
     total_plot_arguments[names(plot_arguments)] <- plot_arguments
@@ -142,27 +147,87 @@ plot_lg <- function(allele_freqs, #data frame with column for CHROM, POS, and fo
     }
     if(x_axis == T){
       axis_positions <- seq(1,max(allele_freqs.long$POS), by=1000000)
-      axis(1, at = axis_positions, labels= 1:length(axis_positions), cex.axis=0.6)
+      axis(1, at = axis_positions, labels= 1:length(axis_positions), cex.axis=0.9, padj=0)
     }
     if(y_axis == T){
       axis_positions <- seq(0,1,by=0.10)
-      axis(2, at = axis_positions, labels = axis_positions,cex.axis=0.6, las=2)
+      axis(2, at = axis_positions, labels = axis_positions,cex.axis=0.9, las=2, padj=0)
     }
   }
 }
 
-#Make a plot for each chromosome
-for(chrom in as.character(unique(allele_freqs$CHROM))){
-  for(rep in 1:2){
-    pdf(paste("plots/", "Rep", rep, "_", chrom, ".pdf", sep=''))
-    plot_lg(allele_freqs, scaffold_sizes, chrom, rep)
-    dev.off()
+################################## Make plots for each chromosome and rep and pull max AF difference ######################################
+
+#First make plots
+for(rep in 1:2){
+  
+  pdf(paste("plots/allele_freqs_rep",rep, ".pdf", sep=''), height=10, width=8)
+  
+  old.par <- par(no.readonly = T)
+  m <- rbind(c(1,2,2,3,3,4,4,5,5),
+             c(1,2,2,3,3,4,4,5,5),
+             c(1,6,6,7,7,8,8,9,9),
+             c(1,6,6,7,7,8,8,9,9),
+             c(1,10,10,11,11,12,12,13,13),
+             c(1,10,10,11,11,12,12,13,13),
+             c(1,14,14,15,15,16,16,17,17),
+             c(1,14,14,15,15,16,16,17,17),
+             c(1,18,18,19,19,20,20,21,21),
+             c(1,18,18,19,19,20,20,21,21),
+             c(1,22,22,22,22,22,22,22,22))
+  layout(m)
+  
+  par(oma=c(1,1,1,1), mar=c(1,1,1,1))
+  
+  #Empty plot where some labels will go
+  plot(0,xlim=c(0,10),ylim=c(0,10),type='n', xaxt='n',yaxt='n',bty='n', xlab='', ylab='')
+  text(3,5.5, "Pc-NY21 Allele Frequency", srt=90, cex=1.5)
+  
+  #Loop thru chromosomes
+  par(mar=c(2,0.5,2,0.5))
+  for(chrom in as.character(unique(allele_freqs$CHROM))){
+  
+    chrom_number <- as.integer(gsub("Cp4.1LG", "", chrom))
+    
+    #Plot x and y axes?
+    y_axis <- F
+    if(chrom %in% c("Cp4.1LG01", "Cp4.1LG05", "Cp4.1LG09", "Cp4.1LG13", "Cp4.1LG17")){
+      y_axis <- T
+    }
+    plot_lg(allele_freqs, scaffold_sizes, chrom, rep, x_axis=T, y_axis=y_axis)
+    
+    #Add chromosome label
+    plot_center <- grconvertX(0.5, "npc", "user")
+    left_bound <- grconvertX(0.3, "npc", "user")
+    right_bound <- grconvertX(0.7, "npc", "user")
+    plot_top <- grconvertY(1, "npc", "user")
+    rect(left_bound, 0.72, right_bound, plot_top, col="white", border="black")
+    text(plot_center, 0.77, paste("CHROM", chrom_number))
   }
+  
+  #Legend at bottom
+  par(mar=c(0,0.5,2,0.5))
+  plot(0, xlim=c(0,10), ylim=c(0,10),type='n', xaxt='n', yaxt='n', bty='n', ylab = 'n', xlab = 'n')
+  text(5,11, "Position (Mb)", cex=1.5, xpd=NA)
+  if(rep == 1){
+    legend("bottom",
+           fill = c('#D55E00', "#0072B2"),
+           legend = c("SUS Pool", "RES pool"),
+           bty = 'n', ncol=3, cex=1.75)
+  }else if(rep == 2){
+    legend("bottom",
+           fill = c('#D55E00', "#0072B2", '#CC79A2'),
+           legend = c("SUS Pool", "RES pool", "RAN pool"),
+           bty = 'n', ncol=3, cex=2, x.intersp=1.5)
+    
+  }
+  par(old.par)
+  dev.off()
 }
 
-#################################################### Make multipane plot ######################################
+################### Make multipane plot with LOD scores and allele freqs on chroms 4,5,8,16 ######################################
 
-pdf("BSA_results.pdf", width=7, height=5)
+pdf("plots/BSA_results.pdf", width=7, height=6)
 old.par <- par(no.readonly = T)
 par(oma=c(0.5,0,2,1))
 
@@ -176,40 +241,40 @@ layout(m)
 par(mar=c(0.25,0,0.25,0))
 #Empty plot where some labels will go
 plot(0,xlim=c(0,10),ylim=c(0,10),type='n', xaxt='n',yaxt='n',bty='n', xlab='', ylab='')
-text(6,5, "Pc-NY21 Allele Frequency", srt=90)
+text(6,5, "Pc-NY21 Allele Frequency", srt=90, cex=1.2)
 
-par(mar=c(0.25,0.75,0.75,1))
-plot_lg(allele_freqs, scaffold_sizes, "Cp4.1LG04", 1, y_axis=T)
-mtext('Chrom 4',side=3, line=0.25, cex=0.6)
-mtext('Rep 1', side=2, line=2, cex=0.6)
-plot_lg(allele_freqs, scaffold_sizes, "Cp4.1LG05", 1)
-mtext('Chrom 5',side=3, line=0.25, cex=0.6)
-plot_lg(allele_freqs, scaffold_sizes, "Cp4.1LG08", 1)
-mtext('Chrom 8',side=3, line=0.25, cex=0.6)
-plot_lg(allele_freqs, scaffold_sizes, "Cp4.1LG16", 1)
-mtext('Chrom 16',side=3, line=0.25, cex=0.6)
+par(mar=c(0.25,1,0.25,1))
+plot_lg(allele_freqs, scaffold_sizes, "Cp4.1LG04", 1, y_axis=T, trim_percent = 0.25)
+mtext('Chrom 4',side=3, line=0.25, cex=0.75)
+mtext('Rep 1', side=2, line=2.5, cex=0.75)
+plot_lg(allele_freqs, scaffold_sizes, "Cp4.1LG05", 1, trim_percent = 0.25)
+mtext('Chrom 5',side=3, line=0.25, cex=0.75)
+plot_lg(allele_freqs, scaffold_sizes, "Cp4.1LG08", 1, trim_percent = 0.25)
+mtext('Chrom 8',side=3, line=0.25, cex=0.75)
+plot_lg(allele_freqs, scaffold_sizes, "Cp4.1LG16", 1, trim_percent = 0.25)
+mtext('Chrom 16',side=3, line=0.25, cex=0.75)
 
-plot_lg(allele_freqs, scaffold_sizes, "Cp4.1LG04", 2, x_axis=T, y_axis=T)
-mtext('Rep 2', side=2, line=2, cex=0.6)
-mtext('Position (Mb)', side=1, line=2, cex=0.6)
+plot_lg(allele_freqs, scaffold_sizes, "Cp4.1LG04", 2, x_axis=T, y_axis=T, trim_percent=0.25)
+mtext('Rep 2', side=2, line=2.5, cex=0.75)
+mtext('Position (Mb)', side=1, line=2.5, cex=0.75)
 y_end <- grconvertY(0, "npc", "ndc")
 chr4_end1 <- grconvertX(0, "npc", "ndc")
 chr4_end2 <- grconvertX(1, "npc", "ndc")
 
-plot_lg(allele_freqs, scaffold_sizes, "Cp4.1LG05", 2, x_axis=T)
+plot_lg(allele_freqs, scaffold_sizes, "Cp4.1LG05", 2, x_axis=T, trim_percent=0.25)
 chr5_end1 <- grconvertX(0, "npc", "ndc")
 chr5_end2 <- grconvertX(1, "npc", "ndc")
-mtext('Position (Mb)', side=1, line=2, cex=0.6)
+mtext('Position (Mb)', side=1, line=2.5, cex=0.75)
 
-plot_lg(allele_freqs, scaffold_sizes, "Cp4.1LG08", 2, x_axis=T)
+plot_lg(allele_freqs, scaffold_sizes, "Cp4.1LG08", 2, x_axis=T, trim_percent=0.25)
 chr8_end1 <- grconvertX(0, "npc", "ndc")
 chr8_end2 <- grconvertX(1, "npc", "ndc")
-mtext('Position (Mb)', side=1, line=2, cex=0.6)
+mtext('Position (Mb)', side=1, line=2.5, cex=0.75)
 
-plot_lg(allele_freqs, scaffold_sizes, "Cp4.1LG16", 2, x_axis=T)
+plot_lg(allele_freqs, scaffold_sizes, "Cp4.1LG16", 2, x_axis=T, trim_percent=0.25)
 chr16_end1 <- grconvertX(0, "npc", "ndc")
 chr16_end2 <- grconvertX(1, "npc", "ndc")
-mtext('Position (Mb)', side=1, line=2, cex=0.6)
+mtext('Position (Mb)', side=1, line=2.5, cex=0.75)
 
 #Legend plot
 par(mar=c(0.25,0,0.25,0))
@@ -227,9 +292,10 @@ par(mar=c(4,4,1,0.25))
 plot(x=0, type="n", xaxt="n",
      xlim=range(cumpos),
      ylim = range(c(lods$S1_v_T1, lods$S2_v_T2)),
-     xlab = "Genomic position",
-     cex.axis=0.8, las=2)
-mtext("LOD", side=2, line=2)
+     xlab = "", ylab="",
+     cex.axis=1, las=2)
+mtext("LOD", side=2, line=1.75, cex=0.75)
+mtext("Genomic position", side=1, line=2, cex=0.75)
 
 for(lg in lgs.unique){
   lines(x=cumpos[lgs==lg],
@@ -274,145 +340,5 @@ grid.lines(x=c(chr16_start2,chr16_end2), y=c(y_start,y_end), gp=gpar(lty=2))
 axis(side=1, at =tick_cumpos, line=0,
      labels = FALSE, tick = T, cex.axis=0.5, lwd.ticks = 0.75)
 
-dev.off()
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-############### Look how plot altogether seems
-
-pdf("plots/BSA_results.pdf")
-old.par <- par(no.readonly = T)
-par(mar=c(1,1,1,1), oma=c(4,6,1,1))
-m <- rbind(c(1,3,5,7),
-           c(2,4,6,8),
-           c(9,9,9,9))
-layout(m)
-for(lg in lgs.unique[c(4,5,8,16)]){ #loop thru lgs
-  allele_freqs.lg <- allele_freqs[allele_freqs$CHROM==lg,]
-  
-  pos.max <- scaffold_sizes[scaffold_sizes[,1] == lg,2]
-  
-  #Window smoothed estimates
-  start_positions <- seq(0, step_size*ceiling(pos.max/step_size)-window_size, by = step_size)
-  if(pos.max %% step_size == 0){
-    stop_positions <-  seq(window_size, pos.max , by = step_size)
-  }else{
-    stop_positions <-  c(seq(window_size, pos.max , by = step_size), pos.max)
-  }
-  #Get window centers based on physical position
-  centers.n <- length(start_positions)
-  centers <- (stop_positions + start_positions)/2
-  smoothed_data <- matrix(NA, nrow=centers.n, ncol=5)
-  
-  for(i in 1:centers.n){
-    window_data <- allele_freqs.lg[allele_freqs.lg$POS > start_positions[i] & allele_freqs.lg$POS <= stop_positions[i], 3:ncol(allele_freqs.lg)]
-    pos.window <- allele_freqs.lg$POS[allele_freqs.lg$POS > start_positions[i] & allele_freqs.lg$POS <= stop_positions[i]]
-    smoothed_data[i,] <- apply(window_data,2,mean)
-    nsnps <- apply(window_data,2,function(x) sum(!is.na(x)))
-    smoothed_data[i,which(nsnps < min_snps)] <- NA
-  }
-  
-  chrom_results <- data.frame("CHROM" = rep(lg, centers.n),
-                              "POS" = centers,
-                              smoothed_data)
-  colnames(chrom_results)[3:ncol(chrom_results)] <- colnames(allele_freqs.lg)[3:ncol(allele_freqs.lg)]
-  
-  #Turn from wide to long
-  rep1_freqs <- melt(allele_freqs.lg[,1:4], id.vars=1:2, variable.name = "pool")
-  rep1_freqs <- rep1_freqs[order(rep1_freqs$POS),]
-  rep2_freqs <- melt(allele_freqs.lg[,c(1:2,5:7)], id.vars=1:2, variable.name = "pool")
-  rep2_freqs <- rep2_freqs[order(rep2_freqs$POS),]
-  
-  #Assign color to pools
-  rep1_freqs$color <- '#D55E00'
-  rep1_freqs$color[rep1_freqs$pool == "t1"] <- "#0072B2"
-  rep2_freqs$color <- '#D55E00'
-  rep2_freqs$color[rep2_freqs$pool == "t2"] <- "#0072B2"
-  rep2_freqs$color[rep2_freqs$pool == "r2"] <- '#CC79A2'
-  
-  #Now start making plots
-  yaxt='n'
-  if(lg=="Cp4.1LG04"){
-    yaxt='s'
-  }
-  plot(rep1_freqs$POS, rep1_freqs$value, pch=3, cex=0.6,col=rep1_freqs$color,
-       ylim=c(0.2,0.8), xaxt='n', yaxt=yaxt, main=lg, ylab='Pc-NY21 Allele Frequency \n Rep 1')
-  lines(chrom_results$POS, chrom_results$s1, col='black', lwd='6')
-  lines(chrom_results$POS, chrom_results$s1, col='#D55E00', lwd='4')
-  lines(chrom_results$POS, chrom_results$t1, col='black', lwd='6')
-  lines(chrom_results$POS, chrom_results$t1, col="#0072B2", lwd='4')
-
-  plot(rep2_freqs$POS, rep2_freqs$value, pch=3, cex=0.5,col=rep2_freqs$color, 
-       ylim=c(0.2,0.8), yaxt=yaxt, ylab='Pc-NY21 Allele Frequency \n Rep 2')
-  lines(chrom_results$POS, chrom_results$s2, col='black', lwd='6')
-  lines(chrom_results$POS, chrom_results$s2, col='#D55E00', lwd='4')
-  lines(chrom_results$POS, chrom_results$t2, col='black', lwd='6')
-  lines(chrom_results$POS, chrom_results$t2, col="#0072B2", lwd='4')
-  lines(chrom_results$POS, chrom_results$r2, col='black', lwd='6')
-  lines(chrom_results$POS, chrom_results$r2, col='#CC79A2', lwd='4')
-}
-
-
-par(mar=c(1,1,3,1),xpd='T')
-plot(x=0, type="n", xaxt="n",
-     xlim=range(cumpos),
-     ylim = range(c(lods$S1_v_T1, lods$S2_v_T2)),
-     xlab = "Genomic position", ylab="LOD",
-     cex.lab=1.3,
-     cex.main = 1.5)
-
-#add lines
-for(lg in lgs.unique){
-  lines(x=cumpos[lgs==lg],
-        y=lods$S1_v_T1[lgs==lg],
-        col='orange')
-  lines(x=cumpos[lgs==lg],
-        y=lods$S2_v_T2[lgs==lg],
-        col='blue')
-}
-for(i in 1:length(lgs.cumsum)){
-  abline(v=lgs.cumsum[i], col='gray', lty=2,xpd=F)
-}
-
-axis(side = 1, at = lgs.centers[,2],
-         labels = 1:20,
-         tick = F, line=0.5, cex.axis=1)
-
-abline(h=4,xpd=F)
-
-par(old.par)
 dev.off()
 
