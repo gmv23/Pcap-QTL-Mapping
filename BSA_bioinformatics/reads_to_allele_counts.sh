@@ -2,7 +2,6 @@
 
 #Run all steps in bioinformatics analyses from whole-genome resequencing Squash BSA
 #To turn raw reads into allele counts
-#Script modified from run_all_steps.sh in sexual_pop scripts
 
 set -e
 
