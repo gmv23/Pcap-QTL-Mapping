@@ -4,7 +4,8 @@ setwd("~/Documents/work/Smart_lab/P_capsici/QTL_mapping/BSA/")
 
 counts <- read.table("data/allele_counts.txt", stringsAsFactors = F, header=T)
 nrow(counts)
-
+seq_stats <- read.csv("data/sequencing_stats.txt", stringsAsFactors=F, header=F)
+colnames(seq_stats) <- c("Sample", "Raw", "Filtered", "Aligned")
 ############################################################ Filter and recode data #############################################################
 
 #Get rid of chromosome 00
@@ -45,10 +46,6 @@ ps_geno <- counts.bi$B02_D25_geno
 pt_geno <- counts.bi$C02_15_6015_geno
 counts.bi$B02_D25_geno <- NULL
 counts.bi$C02_15_6015_geno <- NULL
-counts.bi$C02_15_6015_A1 <- NULL
-counts.bi$C02_15_6015_A2 <- NULL
-counts.bi$B02_D25_A1 <- NULL
-counts.bi$B02_D25_A2 <- NULL
 
 #Change A1 and A2 to susceptible parent derived (A1) and tolerant parent derived (A2)
 convert_alleles <- function(s_geno, t_geno, bulk_alleles){
@@ -84,6 +81,13 @@ counts.bi.collapse <- data.frame("CHROM" = counts.bi$CHROM,
                            "r2_A1" = counts.bi$D01_2_R_1_A1 + counts.bi$E01_2_R_2_A1,
                            "r2_A2" = counts.bi$D01_2_R_1_A2 + counts.bi$E01_2_R_2_A2
 )
+
+counts.parents <- data.frame("CHROM" = counts.bi$CHROM,
+                             "POS" = counts.bi$POS,
+                             "D25_A1" = counts.bi$B02_D25_A1,
+                             "D25_A2" = counts.bi$B02_D25_A2,
+                             "156015_A1" = counts.bi$C02_15_6015_A1,
+                             "156015_A2" = counts.bi$C02_15_6015_A2)
 
 #####################################   Function to filter within pools and convert counts to frequencies   #################################
 
@@ -144,6 +148,31 @@ collapse_columns <- function(counts, data_columns,
   colnames(out)[fill_cols] <- colnames.base[seq(1,length(colnames.base),2)]
   return(out)
 }
+
+###################################################### Make sequencing stats table  #############################################################
+
+rds_pools <- collapse_columns(counts = counts.bi.collapse, data_columns = 3:ncol(counts.bi.collapse), stat_type = "read depth",
+                              rd_filter = c(0.10,1), rd_filter_type = "quantile", freq_filter = 0.9)
+rds_parents <- collapse_columns(counts = counts.parents, data_columns = 3:ncol(counts.parents), stat_type = "read depth",
+                                rd_filter = c(0,1), rd_filter_type = "quantile", freq_filter = 1)
+
+rds_pools_medians <- apply(rds_pools[3:ncol(rds_pools)], 2, median, na.rm=T)
+rds_parents_medians <- apply(rds_parents[3:ncol(rds_parents)], 2, median)
+
+genomesize <- 263500453
+Gb <- 1000000000
+
+seq_table <- data.frame("Sample" = seq_stats$Sample,
+                        "Raw reads (Gb)" = round(seq_stats$Raw/Gb,2),
+                        "Raw reads (Genome coverage)" = round(seq_stats$Raw/genomesize,0),
+                        "Filtered reads (Gb)" = round(seq_stats$Filtered/Gb,2),
+                        "Filtered reads (Genome coverage)" = round(seq_stats$Filtered/genomesize,0),
+                        "Aligned reads (Gb)" = round(seq_stats$Aligned/Gb,2),
+                        "Aligned reads (Genome coverage)" = round(seq_stats$Aligned/genomesize,0),
+                        "Median SNP read depth" = c(rds_parents_medians, rds_pools_medians)
+)
+
+
 ############################################################ Export files  #############################################################
 
 allele_freqs <- collapse_columns(counts = counts.bi.collapse, data_columns = 3:ncol(counts.bi.collapse), stat_type = "frequency",

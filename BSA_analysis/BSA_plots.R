@@ -1,12 +1,13 @@
 setwd("~/Documents/work/Smart_lab/P_capsici/QTL_mapping/BSA/")
 library(reshape2)
+library(grid)
 
 #########################################################   Import data and load scripts  #############################################################
-source("../scripts/Pcap-QTL-Mapping/BSA_analysis/Random_functions_for_sliding_window_analyses.R")
 
-counts <- read.table("data/counts_filtered.txt", stringsAsFactors = F, header=T)
+allele_freqs <- read.table("data/freqs_filtered.txt", stringsAsFactors = F, header=T)
 lods <- read.table("data/multipool_lods.txt", header=T)
 scaffold_sizes <- read.table("data/scaffold_sizes.txt")
+multi_peaks <- read.csv("data/CIs_and_peaks.txt")
 
 ####################################################### Process data prior to making plot ###################################
 
@@ -14,10 +15,6 @@ scaffold_sizes <- read.table("data/scaffold_sizes.txt")
 colnames(scaffold_sizes) <- c("CHROM", "Length")
 scaffold_sizes <- scaffold_sizes[scaffold_sizes$CHROM!="Cp4.1LG00",]
 scaffold_sizes$CHROM <- droplevels(scaffold_sizes$CHROM)
-
-#Turn allele counts into freqs
-allele_freqs <- collapse_columns(counts = counts, data_columns = 3:ncol(counts), stat_type = "frequency",
-                                 rd_filter = c(0,1), rd_filter_type = "quantile", freq_filter = 1)
 
 #Get information out of scaffold sizes matrix
 lgs.unique <- scaffold_sizes[,1]
@@ -52,6 +49,18 @@ for(i in 1:length(lgs.unique)){
   tick_names <- c(tick_names, lg.tick_names)
   tick_cumpos <- c(tick_cumpos, lg.tick_cumpos)
 }
+
+########################################### Look at null and "test" LODs ###################################
+
+#Max LOD score for each comparison and chromosome
+max_lods <- aggregate(cbind(S1_v_S2, T1_v_T2,S1_v_T1, S2_v_T2) ~ CHROM, data=lods, FUN=max, na.rm=T)
+
+#What are the genomewide max LOD score for the two null comparisons
+max_nulls <- apply(max_lods[,c("S1_v_S2", "T1_v_T2")],2,max)
+
+#Which chromsomes feature LODs > 4 for both of the test comparisons
+qtl_chromosomes <- max_lods$CHROM[max_lods$S1_v_T1 > 4 & max_lods$S2_v_T2 >4]
+
 ####################################################### Make chromosome plot function ###################################
 
 plot_lg <- function(allele_freqs, #data frame with column for CHROM, POS, and for each pool
@@ -90,7 +99,7 @@ plot_lg <- function(allele_freqs, #data frame with column for CHROM, POS, and fo
   for(i in 1:centers.n){
     window_data <- allele_freqs.lg[allele_freqs.lg$POS > start_positions[i] & allele_freqs.lg$POS <= stop_positions[i], 3:ncol(allele_freqs.lg)]
     pos.window <- allele_freqs.lg$POS[allele_freqs.lg$POS > start_positions[i] & allele_freqs.lg$POS <= stop_positions[i]]
-    smoothed_data[i,] <- apply(window_data,2,mean)
+    smoothed_data[i,] <- apply(window_data,2,mean, na.rm=T)
     nsnps <- apply(window_data,2,function(x) sum(!is.na(x)))
     smoothed_data[i,which(nsnps < min_snps)] <- NA
   }
@@ -156,7 +165,7 @@ plot_lg <- function(allele_freqs, #data frame with column for CHROM, POS, and fo
   }
 }
 
-################################## Make plots for each chromosome and rep and pull max AF difference ######################################
+#######################################    Make plots for each chromosome and rep     #############################################
 
 #First make plots
 for(rep in 1:2){
@@ -225,17 +234,65 @@ for(rep in 1:2){
   dev.off()
 }
 
+############################################    Make table with QTL lods and max AF diff     #############################################
+
+#Get the location and magnitude of the maximum smoothed allele frequency difference per chromosome
+chroms <- unique(allele_freqs$CHROM)
+max_diff <- data.frame("CHROM" = chroms,
+                       "Pos_R1" = NA,
+                       "DeltaAF_R1" = NA,
+                       "Pos_R2" = NA,
+                       "DeltaAF_R2" = NA)
+for(chrom in chroms){
+  for(rep in 1:2){
+    af_smooth <- plot_lg(allele_freqs, scaffold_sizes, chrom, rep, make_plot = F, return_smoothed = T)
+    diff <- af_smooth[,paste("t",rep,sep="")] - af_smooth[,paste("s",rep,sep="")]
+    diff_coord <- which(abs(diff)==max(abs(diff), na.rm = T))
+    pull <- c(af_smooth$POS[diff_coord], diff[diff_coord])
+    max_diff[max_diff$CHROM == chrom, c(rep*2, rep*2+1)] <- pull
+  }
+}
+
+write.csv(max_diff, "tables/max_smoothed_deltaAF.csv", quote=F, row.names = F)
+
+#Make final table, combining multipool output with allele frequency differences for QTL chromosomes
+
+#Function for converting to Mb and rounding to 2 sig digs
+Bp_to_Mb <- function(x){
+  return(round(x/1000000,2))
+}
+
+#Function for listing Rep 1 and Rep 2 values together like:
+# "XXXX / YYYYY"
+combine_reps <- function(rep1, rep2){
+  return(paste(rep1, "/", rep2, sep=" "))
+}
+
+#Function for turning peak and CI start and end into something like:
+# "Pos (Start - End)"
+addCI <- function(peak, start, end){
+  return(paste(peak, "(", start, "-", end, ")", sep=""))
+}
+chrom_summary <- data.frame("Chrom" = max_diff$CHROM,
+                          "MaxLOD" = combine_reps(max_lods$S1_v_T1, max_lods$S2_v_T2),
+                          "Pos_CI" = combine_reps(addCI(Bp_to_Mb(multi_peaks$Rep1_peak), Bp_to_Mb(multi_peaks$Rep1_start), Bp_to_Mb(multi_peaks$Rep1_end)),
+                                                  addCI(Bp_to_Mb(multi_peaks$Rep2_peak), Bp_to_Mb(multi_peaks$Rep2_start), Bp_to_Mb(multi_peaks$Rep2_end))),
+                          "MaxDeltaAF" = combine_reps(round(max_diff$DeltaAF_R1,2), round(max_diff$DeltaAF_R2,2)),
+                          "Pos" = combine_reps(Bp_to_Mb(max_diff$Pos_R1), Bp_to_Mb(max_diff$Pos_R2)))
+qtl_summary <- chrom_summary[chrom_summary$Chrom %in% qtl_chromosomes,]
+
+write.csv(qtl_summary, "tables/BSA_results.csv", quote=F, row.names = F)
 ################### Make multipane plot with LOD scores and allele freqs on chroms 4,5,8,16 ######################################
 
 pdf("plots/BSA_results.pdf", width=7, height=6)
 old.par <- par(no.readonly = T)
 par(oma=c(0.5,0,2,1))
 
-m <- rbind(c(1,2,3,4,5,10),
-           c(1,6,7,8,9,10 ),
-           c(11,11,11,11,11,11),
-           c(12,12,12,12,12,12),
-           c(12,12,12,12,12,12))
+m <- rbind(c(1,2,3,4,5,6,12),
+           c(1,7,8,9,10,11,12 ),
+           13,
+           14,
+           14)
 layout(m)
 
 par(mar=c(0.25,0,0.25,0))
@@ -251,6 +308,8 @@ plot_lg(allele_freqs, scaffold_sizes, "Cp4.1LG05", 1, trim_percent = 0.25)
 mtext('Chrom 5',side=3, line=0.25, cex=0.75)
 plot_lg(allele_freqs, scaffold_sizes, "Cp4.1LG08", 1, trim_percent = 0.25)
 mtext('Chrom 8',side=3, line=0.25, cex=0.75)
+plot_lg(allele_freqs, scaffold_sizes, "Cp4.1LG12", 1, trim_percent = 0.25)
+mtext('Chrom 12',side=3, line=0.25, cex=0.75)
 plot_lg(allele_freqs, scaffold_sizes, "Cp4.1LG16", 1, trim_percent = 0.25)
 mtext('Chrom 16',side=3, line=0.25, cex=0.75)
 
@@ -269,6 +328,11 @@ mtext('Position (Mb)', side=1, line=2.5, cex=0.75)
 plot_lg(allele_freqs, scaffold_sizes, "Cp4.1LG08", 2, x_axis=T, trim_percent=0.25)
 chr8_end1 <- grconvertX(0, "npc", "ndc")
 chr8_end2 <- grconvertX(1, "npc", "ndc")
+mtext('Position (Mb)', side=1, line=2.5, cex=0.75)
+
+plot_lg(allele_freqs, scaffold_sizes, "Cp4.1LG12", 2, x_axis=T, trim_percent=0.25)
+chr12_end1 <- grconvertX(0, "npc", "ndc")
+chr12_end2 <- grconvertX(1, "npc", "ndc")
 mtext('Position (Mb)', side=1, line=2.5, cex=0.75)
 
 plot_lg(allele_freqs, scaffold_sizes, "Cp4.1LG16", 2, x_axis=T, trim_percent=0.25)
@@ -291,7 +355,7 @@ plot(0,xlim=c(0,10),ylim=c(0,10),type='n', xaxt='n',yaxt='n',bty='n', xlab='', y
 par(mar=c(4,4,1,0.25))
 plot(x=0, type="n", xaxt="n",
      xlim=range(cumpos),
-     ylim = range(c(lods$S1_v_T1, lods$S2_v_T2)),
+     ylim = range(c(lods$S1_v_T1, lods$S2_v_T2), na.rm=T),
      xlab = "", ylab="",
      cex.axis=1, las=2)
 mtext("LOD", side=2, line=1.75, cex=0.75)
@@ -323,6 +387,8 @@ chr5_start1 <- grconvertX(lgs.cumsum[5], "user", "ndc")
 chr5_start2 <- grconvertX(lgs.cumsum[6], "user", "ndc")
 chr8_start1 <- grconvertX(lgs.cumsum[8], "user", "ndc")
 chr8_start2 <- grconvertX(lgs.cumsum[9], "user", "ndc")
+chr12_start1 <- grconvertX(lgs.cumsum[12], "user", "ndc")
+chr12_start2 <- grconvertX(lgs.cumsum[13], "user", "ndc")
 chr16_start1 <- grconvertX(lgs.cumsum[16], "user", "ndc")
 chr16_start2 <- grconvertX(lgs.cumsum[17], "user", "ndc")
 abline(h=4, col='red')
@@ -334,6 +400,8 @@ grid.lines(x=c(chr5_start1,chr5_end1), y=c(y_start,y_end), gp=gpar(lty=2))
 grid.lines(x=c(chr5_start2,chr5_end2), y=c(y_start,y_end), gp=gpar(lty=2))
 grid.lines(x=c(chr8_start1,chr8_end1), y=c(y_start,y_end), gp=gpar(lty=2))
 grid.lines(x=c(chr8_start2,chr8_end2), y=c(y_start,y_end), gp=gpar(lty=2))
+grid.lines(x=c(chr12_start1,chr12_end1), y=c(y_start,y_end), gp=gpar(lty=2))
+grid.lines(x=c(chr12_start2,chr12_end2), y=c(y_start,y_end), gp=gpar(lty=2))
 grid.lines(x=c(chr16_start1,chr16_end1), y=c(y_start,y_end), gp=gpar(lty=2))
 grid.lines(x=c(chr16_start2,chr16_end2), y=c(y_start,y_end), gp=gpar(lty=2))
 
