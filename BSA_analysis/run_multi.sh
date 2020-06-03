@@ -15,7 +15,7 @@ path_to_multipool="/workdir/gmv23/bsa/multipool/multipool/mp_inference_CI_HACK.p
 # 4) output base
 
 launch_multipool(){
-python $1 -n 1056 $2 $3 -m contrast -c 100440 --plotFile $4 -o $4.txt &> $4.log
+python $1 -n 1056 $2 $3 -m contrast -c 125636 --plotFile $4 -o $4.txt &> $4.log
 }
 export -f launch_multipool
 
@@ -85,12 +85,12 @@ do
 	echo -ne ',' >> CIs_and_peaks.txt
 
 	#Pull CI start and stop and peak location for rep 1
-	grep '90% credible interval' s1_v_t1/chr$chrom.log | \
+	grep '90% credible interval' output/s1_v_t1/chr$chrom.log | \
 	sed -r 's/^.*?spans ([0-9]*?) ([0-9]*?) .*?mode: ([0-9]*)$/\1,\2,\3,/' | \
 	xargs echo -n >> CIs_and_peaks.txt
 
 	#Pull CI start and stop and peak location for rep 2
-	grep '90% credible interval' s2_v_t2/chr$chrom.log | \
+	grep '90% credible interval' output/s2_v_t2/chr$chrom.log | \
 	sed -r 's/^.*?spans ([0-9]*?) ([0-9]*?).*?mode: ([0-9]*)$/\1,\2,\3/' | \
 	xargs echo >> CIs_and_peaks.txt
 done
