@@ -62,33 +62,6 @@ for(i in seq(3,ncol(counts.bi),by=2)){
   counts.bi[,i:(i+1)] <- convert_alleles(ps_geno, pt_geno, counts.bi[,i:(i+1)])
 }
 
-####################################################### Compare tech reps and collapse #############################################################
-
-#Kind of complicated number of libraries and lanes per each pool
-#Good way to compare variation due to rep vs library vs sequencer?
-
-#For now just collapse all the tech reps, throw away RAN-1 and TOL-2 merge
-counts.bi.collapse <- data.frame("CHROM" = counts.bi$CHROM,
-                           "POS" = counts.bi$POS,
-                           "s1_A1" = counts.bi$B01_1_S_round2_A1 + counts.bi$B01_1_S_A1,
-                           "s1_A2" = counts.bi$B01_1_S_round2_A2 + counts.bi$B01_1_S_A2,
-                           "t1_A1" = counts.bi$C01_1_T_round2_A1 + counts.bi$C01_1_T_A1,
-                           "t1_A2" = counts.bi$C01_1_T_round2_A2 + counts.bi$C01_1_T_A2,
-                           "s2_A1" = counts.bi$F01_2_S_1_round2_A1 + counts.bi$F01_2_S_1_A1 + counts.bi$G01_2_S_2_round2_A1 + counts.bi$G01_2_S_2_A1,
-                           "s2_A2" = counts.bi$F01_2_S_1_round2_A2 + counts.bi$F01_2_S_1_A2 + counts.bi$G01_2_S_2_round2_A2 + counts.bi$G01_2_S_2_A2,
-                           "t2_A1" = counts.bi$A02_2_T_2_round2_A1 + counts.bi$H01_2_T_1_round2_A1 + counts.bi$H01_2_T_1_A1,
-                           "t2_A2" = counts.bi$A02_2_T_2_round2_A2 + counts.bi$H01_2_T_1_round2_A2 + counts.bi$H01_2_T_1_A2,
-                           "r2_A1" = counts.bi$D01_2_R_1_A1 + counts.bi$E01_2_R_2_A1,
-                           "r2_A2" = counts.bi$D01_2_R_1_A2 + counts.bi$E01_2_R_2_A2
-)
-
-counts.parents <- data.frame("CHROM" = counts.bi$CHROM,
-                             "POS" = counts.bi$POS,
-                             "D25_A1" = counts.bi$B02_D25_A1,
-                             "D25_A2" = counts.bi$B02_D25_A2,
-                             "156015_A1" = counts.bi$C02_15_6015_A1,
-                             "156015_A2" = counts.bi$C02_15_6015_A2)
-
 #####################################   Function to filter within pools and convert counts to frequencies   #################################
 
 #Filter counts and get allele frequencies or read depth
@@ -149,6 +122,124 @@ collapse_columns <- function(counts, data_columns,
   return(out)
 }
 
+####################################################### Compare tech reps and collapse #############################################################
+
+#Kind of complicated number of libraries and lanes per each pool
+
+#Turn allele counts into allele freqs for all tech reps separately
+allele_freqs.full <- collapse_columns(counts = counts.bi, data_columns = 3:ncol(counts.bi), stat_type = "frequency",
+                         rd_filter = c(0.10,1), rd_filter_type = "quantile", freq_filter = 0.9)
+
+#Get pairwise correlations of allele frequencies
+af.cor <- cor(allele_freqs.full[-c(1,2)],use="complete.obs")
+af.cor[lower.tri(af.cor)] <- NA
+af.cor[diag(nrow=nrow(af.cor))==1] <- NA
+
+#Generate list of sample pairs representing either tech reps or bio reps
+tech_reps <- rbind(c(3,4),
+                   c(6,7),
+                   c(9,10),
+                   c(11,12),
+                   c(11,13),
+                   c(11,14),
+                   c(12,13),
+                   c(13,14),
+                   c(12,14),
+                   c(15,16))
+bio_reps <- rbind(c(3,11),
+                  c(3,12),
+                  c(3,13),
+                  c(3,14),
+                  c(4,11),
+                  c(4,12),
+                  c(4,13),
+                  c(4,14),
+                  c(6,15),
+                  c(6,16),
+                  c(7,15),
+                  c(7,16))
+
+#Pull out read depth medians of all pools
+rds <- collapse_columns(counts = counts.bi, data_columns = 3:ncol(counts.bi), stat_type = "read depth",
+                              rd_filter = c(0.10,1), rd_filter_type = "quantile", freq_filter = 0.9)
+rds_medians <- apply(rds[3:ncol(rds)], 2, median, na.rm=T)
+
+#Now get data frame showing pairwise correlations between all pairs of samples
+#and include whether those samples are a bio or tech rep or neither
+#and what the avg median read depth is
+frequency_correlations <- data.frame("Sample1" = rep(NA,16*16/2-16),
+                                     "Sample2" = NA,
+                                     "Relation" = NA,
+                                     "Cor" = NA,
+                                     "RD1" = NA,
+                                     "RD2" = NA,
+                                     "RDmean" = NA)
+
+counter <- 0
+for(i in 1:15){
+  for(j in (i+1):16){
+    counter <- counter + 1
+    sample1 <- colnames(af.cor)[i]
+    sample2 <- colnames(af.cor)[j]
+    samplecor <- af.cor[i,j]
+    rd1 <- rds_medians[i]
+    rd2 <- rds_medians[j]
+    RDmean <- mean(c(rd1,rd2))
+    frequency_correlations[counter,] <- c(sample1, sample2, "NA", samplecor, rd1, rd2, RDmean)
+  }
+}
+
+for(i in 1:nrow(tech_reps)){
+  frequency_correlations$Relation[frequency_correlations$Sample1==colnames(af.cor)[tech_reps[i,1]] & 
+                                    frequency_correlations$Sample2==colnames(af.cor)[tech_reps[i,2]]] <- "TECH"
+}
+for(i in 1:nrow(bio_reps)){
+  frequency_correlations$Relation[frequency_correlations$Sample1==colnames(af.cor)[bio_reps[i,1]] & 
+                                    frequency_correlations$Sample2==colnames(af.cor)[bio_reps[i,2]]] <- "BIO"
+}
+
+#Plot how average pool read depth affects correlation between allele frequency values between pools
+#color data points by whether they're a bio rep, tech rep, or neither
+
+frequency_correlations$Cor <- as.numeric(frequency_correlations$Cor)
+frequency_correlations$RD1 <- as.numeric(frequency_correlations$RD1)
+frequency_correlations$RD2 <- as.numeric(frequency_correlations$RD2)
+frequency_correlations$RDmean <- as.numeric(frequency_correlations$RDmean)
+relation_color <- rep('gray',nrow(frequency_correlations))
+relation_color[frequency_correlations$Relation=="TECH"] <- 'blue'
+relation_color[frequency_correlations$Relation=="BIO"] <- 'purple'
+plot(frequency_correlations$RDmean, frequency_correlations$Cor, col=relation_color, pch=16)
+cor(frequency_correlations$RDmean, frequency_correlations$Cor)
+cor(frequency_correlations$RDmean[frequency_correlations$Relation=="TECH"], 
+    frequency_correlations$Cor[frequency_correlations$Relation=="TECH"])
+cor(frequency_correlations$RDmean[frequency_correlations$Relation=="BIO"], 
+    frequency_correlations$Cor[frequency_correlations$Relation=="BIO"])
+mean(frequency_correlations$Cor[frequency_correlations$Relation=="TECH"])
+mean(frequency_correlations$Cor[frequency_correlations$Relation=="BIO"])
+
+#Now just collapse all the tech reps, throw away RAN-1 and TOL-2 merge
+counts.bi.collapse <- data.frame("CHROM" = counts.bi$CHROM,
+                           "POS" = counts.bi$POS,
+                           "s1_A1" = counts.bi$B01_1_S_round2_A1 + counts.bi$B01_1_S_A1,
+                           "s1_A2" = counts.bi$B01_1_S_round2_A2 + counts.bi$B01_1_S_A2,
+                           "t1_A1" = counts.bi$C01_1_T_round2_A1 + counts.bi$C01_1_T_A1,
+                           "t1_A2" = counts.bi$C01_1_T_round2_A2 + counts.bi$C01_1_T_A2,
+                           "s2_A1" = counts.bi$F01_2_S_1_round2_A1 + counts.bi$F01_2_S_1_A1 + counts.bi$G01_2_S_2_round2_A1 + counts.bi$G01_2_S_2_A1,
+                           "s2_A2" = counts.bi$F01_2_S_1_round2_A2 + counts.bi$F01_2_S_1_A2 + counts.bi$G01_2_S_2_round2_A2 + counts.bi$G01_2_S_2_A2,
+                           "t2_A1" = counts.bi$A02_2_T_2_round2_A1 + counts.bi$H01_2_T_1_round2_A1 + counts.bi$H01_2_T_1_A1,
+                           "t2_A2" = counts.bi$A02_2_T_2_round2_A2 + counts.bi$H01_2_T_1_round2_A2 + counts.bi$H01_2_T_1_A2,
+                           "r2_A1" = counts.bi$D01_2_R_1_A1 + counts.bi$E01_2_R_2_A1,
+                           "r2_A2" = counts.bi$D01_2_R_1_A2 + counts.bi$E01_2_R_2_A2
+)
+
+counts.parents <- data.frame("CHROM" = counts.bi$CHROM,
+                             "POS" = counts.bi$POS,
+                             "D25_A1" = counts.bi$B02_D25_A1,
+                             "D25_A2" = counts.bi$B02_D25_A2,
+                             "156015_A1" = counts.bi$C02_15_6015_A1,
+                             "156015_A2" = counts.bi$C02_15_6015_A2)
+
+
 ###################################################### Make sequencing stats table  #############################################################
 
 rds_pools <- collapse_columns(counts = counts.bi.collapse, data_columns = 3:ncol(counts.bi.collapse), stat_type = "read depth",
@@ -172,11 +263,16 @@ seq_table <- data.frame("Sample" = seq_stats$Sample,
                         "Median SNP read depth" = c(rds_parents_medians, rds_pools_medians)
 )
 
+write.csv(seq_table, "tables/seqstats.csv", row.names = F, quote=F)
+
 
 ############################################################ Export files  #############################################################
 
 allele_freqs <- collapse_columns(counts = counts.bi.collapse, data_columns = 3:ncol(counts.bi.collapse), stat_type = "frequency",
                                  rd_filter = c(0.10,1), rd_filter_type = "quantile", freq_filter = 0.9)
+
+n_snps <- apply(allele_freqs[,3:ncol(allele_freqs)],2,function(x) sum(!is.na(x)))
+summary(n_snps)
 
 # Write marker files for multipool -- separate file for each pool and each chromosome
 # Markers will be filtered within pools and markers filtered within that pool will not be included in any comparison with that pool

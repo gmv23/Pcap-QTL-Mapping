@@ -71,6 +71,7 @@ plot_lg <- function(allele_freqs, #data frame with column for CHROM, POS, and fo
                     step_size = 100000, #step_size for smoothing
                     min_snps = 30, #if a given window has fewer than this many snps, write NA
                     trim_percent = 1, #Show this proportion of SNPs as dots on the plot
+                    FUN = function(x) mean(x, na.rm=T), #Function to perform on SNPs in the window
                     plot_arguments = list(), #arguments to pass to plot
                     return_smoothed = F, #If true, return data frame with window smoothed estimates
                     make_plot = T, #whether or not to plot
@@ -79,6 +80,7 @@ plot_lg <- function(allele_freqs, #data frame with column for CHROM, POS, and fo
 ){
   
   require(reshape2)
+  FUN <- match.fun(FUN)
   allele_freqs.lg <- allele_freqs[allele_freqs$CHROM==chrom,]
   pos.max <- scaffold_sizes$Length[scaffold_sizes$CHROM == chrom]
   
@@ -99,7 +101,7 @@ plot_lg <- function(allele_freqs, #data frame with column for CHROM, POS, and fo
   for(i in 1:centers.n){
     window_data <- allele_freqs.lg[allele_freqs.lg$POS > start_positions[i] & allele_freqs.lg$POS <= stop_positions[i], 3:ncol(allele_freqs.lg)]
     pos.window <- allele_freqs.lg$POS[allele_freqs.lg$POS > start_positions[i] & allele_freqs.lg$POS <= stop_positions[i]]
-    smoothed_data[i,] <- apply(window_data,2,mean, na.rm=T)
+    smoothed_data[i,] <- apply(window_data,2,FUN)
     nsnps <- apply(window_data,2,function(x) sum(!is.na(x)))
     smoothed_data[i,which(nsnps < min_snps)] <- NA
   }
@@ -165,6 +167,19 @@ plot_lg <- function(allele_freqs, #data frame with column for CHROM, POS, and fo
   }
 }
 
+#######################################    Look at SNP allele frequency standard deviations in sliding windows     #############################################
+
+freq_sds <- plot_lg(allele_freqs, scaffold_sizes, chrom="Cp4.1LG01", rep=2, step_size=500000,
+                    make_plot = F, return_smoothed = T, FUN=function(x) sqrt(var(x, na.rm=T)))
+for(chrom in unique(allele_freqs$CHROM)){
+  freq_sds <- rbind(freq_sds, 
+                    plot_lg(allele_freqs, scaffold_sizes, chrom=chrom, rep=2, step_size=500000,
+                            make_plot = F, return_smoothed = T, FUN=function(x) sqrt(var(x, na.rm=T))))
+}
+apply(freq_sds[3:ncol(freq_sds)],2,summary)
+
+apply(allele_freqs[,3:ncol(allele_freqs)],2,function(x) sqrt(var(x,na.rm=T)))
+
 #######################################    Make plots for each chromosome and rep     #############################################
 
 #First make plots
@@ -203,7 +218,7 @@ for(rep in 1:2){
     if(chrom %in% c("Cp4.1LG01", "Cp4.1LG05", "Cp4.1LG09", "Cp4.1LG13", "Cp4.1LG17")){
       y_axis <- T
     }
-    plot_lg(allele_freqs, scaffold_sizes, chrom, rep, x_axis=T, y_axis=y_axis)
+    plot_lg(allele_freqs, scaffold_sizes, chrom, rep, x_axis=T, y_axis=y_axis, trim_percent = 0.25)
     
     #Add chromosome label
     plot_center <- grconvertX(0.5, "npc", "user")
@@ -282,6 +297,7 @@ chrom_summary <- data.frame("Chrom" = max_diff$CHROM,
 qtl_summary <- chrom_summary[chrom_summary$Chrom %in% qtl_chromosomes,]
 
 write.csv(qtl_summary, "tables/BSA_results.csv", quote=F, row.names = F)
+
 ################### Make multipane plot with LOD scores and allele freqs on chroms 4,5,8,16 ######################################
 
 pdf("plots/BSA_results.pdf", width=7, height=6)
