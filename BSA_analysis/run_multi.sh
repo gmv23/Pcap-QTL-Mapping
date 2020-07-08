@@ -3,7 +3,7 @@
 # Wrapper for running multipool on each chromosome and for different comparisons
 # And then compiling output files together
 
-path_to_multipool="/workdir/gmv23/bsa/multipool/multipool/mp_inference_CI_HACK.py"
+path_to_multipool="/workdir/gmv23/bsa/multipool/multipool/mp_inference.py"
 
 ###################################### Run multipool in parallel ######################
 
