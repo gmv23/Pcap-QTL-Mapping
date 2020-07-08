@@ -15,7 +15,7 @@ path_to_multipool="/workdir/gmv23/bsa/multipool/multipool/mp_inference.py"
 # 4) output base
 
 launch_multipool(){
-python $1 -n 1056 $2 $3 -m contrast -c 125636 --plotFile $4 -o $4.txt &> $4.log
+python2 $1 -n 1056 $2 $3 -m contrast -c 125636 --plotFile $4 -o $4.txt &> $4.log
 }
 export -f launch_multipool
 
