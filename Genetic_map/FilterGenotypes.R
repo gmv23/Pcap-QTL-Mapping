@@ -141,6 +141,7 @@ i <- 1
 markers_to_remove <- c()
 d <- nrow(geno_f2)
 
+set.seed(1957)
 while(i < d){
   if(dup(geno_f2[i,], geno_f2[i+1,])){
     dup_run <- c(i,i+1)
