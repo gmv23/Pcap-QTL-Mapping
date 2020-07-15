@@ -56,7 +56,7 @@ par(mfrow=c(5,2))
 
 #Loop through traits
 for(i in 1:5){
-  trait_name <- colnames(blues)[i]
+  trait_name <- colnames(trait_blues)[i]
 
   #Fit random effects model
   mod1 <- lmer(disease_prog[,trait_columns[i]] ~ (1|disease_prog$entry) + (1|disease_prog$Rep))
@@ -121,7 +121,7 @@ abline(v=pcny21, lwd=2.5, lty=3)
 plot(0,type='n', xaxt='n', yaxt='n', ylab='', xlab='', bty='n', xlim=c(0,10), ylim=c(0,10))
 legend(-20,9,
        legend = c(expression("Dunja F"[1]), "PcNY-21", expression("F"[1])),
-       lty=c(1,3,2), bty='n', cex=1, lwd=2, xpd='NA',
+       lty=c(1,3,2), bty='n', cex=1, lwd=2, xpd=NA,
        y.intersp=2)
 dev.off()
 
