@@ -48,17 +48,17 @@ fi
 for i in $(seq -w 1 20)
 	do
 	#Get rid of header, get rid of second column, and sort each file
-	tail -n +2 output/s1_v_s2/chr${i}.txt | cut -f1,3 | sort -k 1 -n > temp_joint/s1_v_s2_chr${i}.txt
-	tail -n +2 output/t1_v_t2/chr${i}.txt | cut -f1,3 | sort -k 1 -n > temp_joint/t1_v_t2_chr${i}.txt
-	tail -n +2 output/s1_v_t1/chr${i}.txt | cut -f1,3 | sort -k 1 -n > temp_joint/s1_v_t1_chr${i}.txt
-	tail -n +2 output/s2_v_t2/chr${i}.txt | cut -f1,3 | sort -k 1 -n > temp_joint/s2_v_t2_chr${i}.txt
+	tail -n +2 output/s1_v_s2/chr${i}.txt | cut -f1,3 | sort -k 1 > temp_joint/s1_v_s2_chr${i}.txt
+	tail -n +2 output/t1_v_t2/chr${i}.txt | cut -f1,3 | sort -k 1 > temp_joint/t1_v_t2_chr${i}.txt
+	tail -n +2 output/s1_v_t1/chr${i}.txt | cut -f1,3 | sort -k 1 > temp_joint/s1_v_t1_chr${i}.txt
+	tail -n +2 output/s2_v_t2/chr${i}.txt | cut -f1,3 | sort -k 1 > temp_joint/s2_v_t2_chr${i}.txt
 
 	echo "start joining"
 	#Join files with different comparisons on the position field and add chromosome name
 	join -1 1 -2 1 -a 1 -a 2 -e 'NA' -o '0,1.2,2.2' temp_joint/s1_v_s2_chr${i}.txt temp_joint/t1_v_t2_chr${i}.txt \
-	| sort -k 1 -n | \
+	| sort -k 1 | \
 	join -1 1 -2 1 -a 1 -a 2 -e 'NA' -o '0,1.2,1.3,2.2' - temp_joint/s1_v_t1_chr${i}.txt \
-	| sort -k 1 -n | \
+	| sort -k 1 | \
 	join -1 1 -2 1 -a 1 -a 2 -e 'NA' -o '0,1.2,1.3,1.4,2.2' - temp_joint/s2_v_t2_chr${i}.txt \
 	| sort -k 1 -n | \
 	awk -v i=$i '{print "Cp4.1LG"i"", $0}' > temp_joint/chr${i}_all.txt
