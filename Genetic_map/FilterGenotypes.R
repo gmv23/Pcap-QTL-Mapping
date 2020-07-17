@@ -179,10 +179,10 @@ geno_filter_unite_prune <- cbind(geno_f2_prune, geno_parent_prune)
 table(snps$CHROM)
 table(snps_prune$CHROM)
 
-write.csv(geno_filter_unite, "tables/geno_filter.txt", quote=F, row.names = F)
-write.csv(geno_filter_unite_prune, "tables/geno_filter_prune.txt", quote=F, row.names = F)
-write.csv(snps, "tables/snps_filter.txt", quote=F, row.names=F)
-write.csv(snps, "tables/snps_filter_prune.txt", quote=F, row.names=F)
+write.csv(geno_filter_unite, "tables/geno_filter.csv", quote=F, row.names = F)
+write.csv(geno_filter_unite_prune, "tables/geno_filter_prune.csv", quote=F, row.names = F)
+write.csv(snps, "tables/snps_filter.csv", quote=F, row.names=F)
+write.csv(snps_prune, "tables/snps_filter_prune.csv", quote=F, row.names=F)
 
 ##############################        Make file for import into r/qtl        #####################################
 

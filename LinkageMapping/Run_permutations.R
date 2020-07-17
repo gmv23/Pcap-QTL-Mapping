@@ -2,7 +2,6 @@ library(qtl)
 library(parallel)
 
 squash <- readRDS("squash_map.rds")
-squash <- calc.genoprob(squash, error.prob = .003)
 
 run_permutation <- function(i){
   perm.out <- scantwo(squash, pheno.col=5, n.perm=20,

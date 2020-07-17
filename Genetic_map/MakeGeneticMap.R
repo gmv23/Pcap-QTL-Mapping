@@ -27,7 +27,7 @@ for(i in 1:20){
 }
 
 #Make map and plot
-newmap <- est.map(squash, error.prob=0.003)
+newmap <- est.map(squash, error.prob=0.003, map.function="kosambi")
 plotMap(newmap)
 #########################          FIX MARKER PLACEMENT PROBLEMS        ################################
 
@@ -77,7 +77,7 @@ dev.off()
 
 ###### Use ASMap to reorder markers within each linkage group
 squash.mst <- convert2bcsft(squash, BC.gen = 0, F.gen = 0, error.prob = 0.003)
-squash.mst <- mstmap.cross(squash.mst, id='Sample', bychr=T, p.value=2)
+squash.mst <- mstmap.cross(squash.mst, id='Sample', bychr=T, p.value=2, dist.fun="kosambi")
 
 #Invert all marker orders so genetic and physical maps are in same orientation
 squash.mst <- flip.order(squash.mst, 1:20)
@@ -123,16 +123,9 @@ for(i in 1:20){
 par(old.par)
 dev.off()
 
+squash <- calc.genoprob(squash, step=1, error.prob = .003, map.function = "kosambi", stepwidth = "fixed")
 
-
-
-
-
-
-#Simulate genotypes across entire map
-#set.seed(1989)
-#squash.mst <- sim.geno(squash.mst, n.draws=512, step=1, error.prob=0.003)
-#saveRDS(squash.mst, "squash_map.rds")
+saveRDS(squash.mst, "squash_map.rds")
 
 
 
