@@ -123,7 +123,7 @@ for(i in 1:20){
 par(old.par)
 dev.off()
 
-squash <- calc.genoprob(squash, step=1, error.prob = .003, map.function = "kosambi", stepwidth = "fixed")
+squash.mst <- calc.genoprob(squash, step=1, error.prob = .003, map.function = "kosambi", stepwidth = "fixed")
 
 saveRDS(squash.mst, "squash_map.rds")
 
