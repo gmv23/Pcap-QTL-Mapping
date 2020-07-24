@@ -100,30 +100,4 @@ trait_blues <- as.data.frame(trait_blues)
 #Save data
 write.csv(results, "tables/trait_summaries.csv", quote=F)
 write.csv(trait_blues, "tables/f23_blues.csv", quote=F)
-######################################    Show phenotypic distribution    #######################################
-
-pdf("plots/audpc_hist.pdf", width=4, height = 3)
-old.par <- par(no.readonly = T)
-par(mar=c(5,4,2,1), oma=c(1,1,1,1))
-m <- rbind(c(1,1,1,2))
-layout(m)
-hist(trait_blues[c(random_families, selected_families),5],
-     xlim = c(0,100),
-     ylim=c(0,40),
-     breaks=20,
-     col=colors()[431],
-     xlab = "rAUDPC BLUEs",
-     ylab = "Frequency",
-     main = "")
-abline(v=dunja, lwd=2.5, lty = 1)
-abline(v=f1, lwd=2.5, lty=2)
-abline(v=pcny21, lwd=2.5, lty=3)
-plot(0,type='n', xaxt='n', yaxt='n', ylab='', xlab='', bty='n', xlim=c(0,10), ylim=c(0,10))
-legend(-20,9,
-       legend = c(expression("Dunja F"[1]), "PcNY-21", expression("F"[1])),
-       lty=c(1,3,2), bty='n', cex=1, lwd=2, xpd=NA,
-       y.intersp=2)
-dev.off()
-
-
 

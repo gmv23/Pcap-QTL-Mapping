@@ -289,14 +289,23 @@ addCI <- function(peak, start, end){
   return(paste(peak, "(", start, "-", end, ")", sep=""))
 }
 chrom_summary <- data.frame("Chrom" = max_diff$CHROM,
+                            "MaxLOD" = combine_reps(max_lods$S1_v_T1, max_lods$S2_v_T2),
+                            "Pos_CI" = combine_reps(addCI(multi_peaks$Rep1_peak, multi_peaks$Rep1_start, multi_peaks$Rep1_end),
+                                                    addCI(multi_peaks$Rep2_peak, multi_peaks$Rep2_start, multi_peaks$Rep2_end)),
+                            "MaxDeltaAF" = combine_reps(round(max_diff$DeltaAF_R1,2), round(max_diff$DeltaAF_R2,2)),
+                            "Pos" = combine_reps(max_diff$Pos_R1, max_diff$Pos_R2))
+chrom_summary.round <- data.frame("Chrom" = max_diff$CHROM,
                           "MaxLOD" = combine_reps(max_lods$S1_v_T1, max_lods$S2_v_T2),
                           "Pos_CI" = combine_reps(addCI(Bp_to_Mb(multi_peaks$Rep1_peak), Bp_to_Mb(multi_peaks$Rep1_start), Bp_to_Mb(multi_peaks$Rep1_end)),
                                                   addCI(Bp_to_Mb(multi_peaks$Rep2_peak), Bp_to_Mb(multi_peaks$Rep2_start), Bp_to_Mb(multi_peaks$Rep2_end))),
                           "MaxDeltaAF" = combine_reps(round(max_diff$DeltaAF_R1,2), round(max_diff$DeltaAF_R2,2)),
                           "Pos" = combine_reps(Bp_to_Mb(max_diff$Pos_R1), Bp_to_Mb(max_diff$Pos_R2)))
 qtl_summary <- chrom_summary[chrom_summary$Chrom %in% qtl_chromosomes,]
+qtl_summary.round <- chrom_summary.round[chrom_summary.round$Chrom %in% qtl_chromosomes,]
+
 
 write.csv(qtl_summary, "tables/BSA_results.csv", quote=F, row.names = F)
+write.csv(qtl_summary.round, "tables/BSA_results_round.csv", quote=F, row.names = F)
 
 ################### Make multipane plot with LOD scores and allele freqs on chroms 4,5,8,16 ######################################
 
