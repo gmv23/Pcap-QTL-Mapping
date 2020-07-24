@@ -5,7 +5,7 @@ squash <- readRDS("squash_map.rds")
 
 run_permutation <- function(i){
   perm.out <- scantwo(squash, pheno.col=5, n.perm=20,
-                      method="hk")
+                      method="hk", incl.markers=T)
   saveRDS(perm.out, file = paste("out/perms", i, ".rds", sep=""))
 }
 
