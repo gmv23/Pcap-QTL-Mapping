@@ -7,6 +7,9 @@ squash <- readRDS("../genetic_map/squash_map.rds")
 #Import snps
 snps <- read.csv("../genetic_map/tables/snps_filter_prune.csv")
 
+#Import multipool results to find GBS markers closest to BSA peaks
+peaks <- read.csv("../BSA/data/CIs_and_peaks.txt", header=T)
+
 ########################################      Perform MQM using F23 data    ####################################
 
 #Import LOD scores from 1000 
@@ -35,26 +38,26 @@ dev.off()
 
 #Get 90% confidence intervals for QTL
 CI.lm <- data.frame("Chrom" = stepwise.out$chr,
-                      "Start" = NA,
                       "Peak" = NA,
-                      "End" = NA)
+                      "CI" = NA)
 for(i in 1:nrow(CI.lm)){
    ci <- bayesint(stepwise.out, qtl.index=i, expandtomarkers = T, prob=0.90)
    marker.pos <- find.marker(squash, chr=ci$chr, pos=ci$pos)
    bp.pos <- as.integer(gsub("[0-9]?_","", marker.pos))
-   CI.lm[i,2:ncol(CI.lm)] <- bp.pos  
+   ci.string <- paste(bp.pos[1],bp.pos[3],sep="-")
+   CI.lm$Peak[i] <- bp.pos[2]
+   CI.lm$CI[i] <- ci.string
 }
-  
+#Hardcode in Chrom 4 CI; disjoint interval because of inversion in genetic map
+CI.lm$CI[1] <- "0-20944;8074112-8504971"
 
 ###################################      Find GBS markers closest to BSA peaks    #################################
 
 #Pull out imputed genotypes
-geno <- pull.argmaxgeno(argmax.geno(squash))
+geno <- pull.argmaxgeno(argmax.geno(squash, error.prob=0.001,
+                        map.function="kosambi", stepwidth="fixed"))
 geno <- geno - 1
 rownames(geno) <- squash$pheno$Sample
-
-#Bring in multipool results to find GBS marker position closest to BSA Lod peaks on Chroms 4,5,8,12,16
-peaks <- read.csv("../BSA/data/CIs_and_peaks.txt", header=T)
 
 #Make new data frame to put results with GBS markers
 BSA_markers <- peaks[c(4,5,8,12,16),c("CHROM", "Rep1_peak", "Rep2_peak")]
@@ -86,50 +89,102 @@ BSA_markers$AF_select <- apply(qtl_geno[which.select,], 2, function(x) sum(x/(le
 
 #Write tables
 GBS_markers_print <- BSA_markers[,c("CHROM", "GBS_BP", "distance", "AF_random", "AF_select")]
-write.csv(GBS_markers_print, "tables/GBS_markers_print", row.names = F, quote = F)
+GBS_markers_print$CHROM <- as.integer(gsub("Cp4.1LG","",as.character(GBS_markers_print$CHROM)))
+write.csv(GBS_markers_print, "tables/GBS_markers_print.csv", row.names = F, quote = F)
 write.csv(qtl_geno, "tables/qtl_marker_genotypes.csv", row.names = T, quote=F)
 
 ####################################      Look at QTL effects for two models    #################################
 
-#Linkage mapping QTL model
+############## Linkage mapping QTL model ###########
 qtl.lm <- stepwise.out
 
-#BSA QTL model
+#Fit QTL models and look at % variation and effect sizes
+fit.lm <- fitqtl(squash, pheno.col=5, qtl=qtl.lm, method="hk", get.ests=T)
+
+#Total % variation explained by QTL model
+fit.lm$result.full
+
+#QTl effect sizes
+effects.lm <- fit.lm$ests$ests
+
+#Put together QTL location, CI, % variation explained, p-value, and effect sizes
+qtl_summary.lm <- cbind(CI.lm,
+                        "Genetic_pos" = qtl.lm$pos,
+                        fit.lm$result.drop[,c("LOD", "%var", "Pvalue(F)")])
+qtl_summary.lm <- data.frame(qtl_summary.lm)
+#Add effect sizes
+qtl_summary.lm$effect_a <- NA
+qtl_summary.lm$effect_d <- NA
+for(i in 1:nrow(qtl_summary.lm)){
+  qtl_summary.lm[i,c("effect_a", "effect_d")] <- 
+    effects.lm[grep(paste(qtl_summary.lm$Chrom[i],"@",sep=""), names(effects.lm))]
+}
+
+############## BSA QTL model ###########
+
 bsa_marker_pos <- find.markerpos(squash, BSA_markers$marker_name)
 qtl.bsa <- makeqtl(squash, chr = bsa_marker_pos$chr, pos = bsa_marker_pos$pos, what="prob")
 
 #Fit QTL models and look at % variation and effect sizes
-fit.lm <- fitqtl(squash, pheno.col=5, qtl=qtl.lm, method="hk")
-fit.bsa <- fitqtl(squash, pheno.col=5, qtl=qtl.bsa, method="hk")
+fit.bsa <- fitqtl(squash, pheno.col=5, qtl=qtl.bsa, method="hk", get.ests = T)
 
+#Total % variation explained by QTL model
+fit.bsa$result.full
 
+#QTl effect sizes
+effects.bsa <- fit.bsa$ests$ests
 
-
-
-
-
-
-
-
-
-####################################      Do BSA in individually genotyped F2s    #################################
-
-#chisquare test for allele frequency differences between random and select individuals
-
-count_alleles <- function(x){
-  n1 <- sum(x==1)+2*sum(x==0)
-  n2 <- sum(x==1)+2*sum(x==2)
-  return(c(n1,n2))
-}
-pvals <- rep(NA, ncol(geno))
-for(i in 1:ncol(geno)){
-  alleles.ran <- count_alleles(geno[which.random,i])
-  alleles.sel <- count_alleles(geno[which.select,i])
-  con.table <- cbind(alleles.ran, alleles.sel)
-  chisq <- chisq.test(con.table) 
-  pvals[i] <- chisq$p.value
+#Put together QTL location, CI, % variation explained, p-value, and effect sizes
+qtl_summary.bsa <- cbind("Chrom" = GBS_markers_print$CHROM,
+                        "Position" = GBS_markers_print$GBS_BP,
+                        "Genetic_pos" = qtl.bsa$pos,
+                        fit.bsa$result.drop[,c("LOD", "%var", "Pvalue(F)")])
+qtl_summary.bsa <- data.frame(qtl_summary.bsa)
+#Add effect sizes
+qtl_summary.bsa$effect_a <- NA
+qtl_summary.bsa$effect_d <- NA
+for(i in 1:nrow(qtl_summary.bsa)){
+  qtl_summary.bsa[i,c("effect_a", "effect_d")] <- 
+    effects.bsa[grep(paste(qtl_summary.bsa$Chrom[i],"@",sep=""), names(effects.bsa))]
 }
 
-chisq.results <- data.frame("CHR"=as.integer(gsub("Cp4.1LG", "", snps$CHROM)),
-                            "BP"=snps$BP,
-                            "P" = pvals)
+####################################      Write QTL tables    #################################
+
+qtl_summary.bsa.round <- qtl_summary.bsa
+qtl_summary.bsa.round[,c(3,4,5,7,8)] <- apply(qtl_summary.bsa[,c(3,4,5,7,8)],2,round,digits=2)
+qtl_summary.bsa.round$Pvalue.F. <- signif(qtl_summary.bsa.round$Pvalue.F.,3)
+qtl_summary.bsa.round$Position <- round(qtl_summary.bsa.round$Position/1000000,2)
+
+qtl_summary.lm.round <- qtl_summary.lm
+qtl_summary.lm.round[,c(4,5,6,8,9)] <- apply(qtl_summary.lm[,c(4,5,6,8,9)],2,round,digits=2)
+qtl_summary.lm.round$Pvalue.F. <- signif(qtl_summary.lm.round$Pvalue.F.,3)
+
+#Turn numbers in CI into Mb
+round_ci <- function(x){
+  
+  m.numbers <- gregexpr('[0-9]+',x)
+  numbers <- as.integer(unlist(regmatches(x,m.numbers)))
+  numbers.round <- round(numbers/1000000,2)
+  
+  m.connectors <- gregexpr('[^0-9]+',x)
+  connectors <- unlist(regmatches(x,m.connectors))
+  
+  newstring <- ""
+  for(i in 1:length(connectors)){
+    newstring <- paste(newstring,numbers.round[i], sep="")
+    newstring <- paste(newstring,connectors[i], sep="")
+    if(i == length(connectors)){
+      newstring <- paste(newstring,numbers.round[(i+1)], sep="")
+    }
+  }
+  return(newstring)
+}
+
+qtl_summary.lm.round$CI <- sapply(qtl_summary.lm.round$CI, round_ci)
+qtl_summary.lm.round$Peak <- round(qtl_summary.lm.round$Peak/1000000,2)
+
+write.csv(qtl_summary.bsa, "tables/qtl_summary_bsa.csv", row.names = F, quote=F)
+write.csv(qtl_summary.bsa.round, "tables/qtl_summary_bsa_ROUNDED.csv", row.names = F, quote=F)
+write.csv(qtl_summary.lm, "tables/qtl_summary_lm.csv", row.names = F, quote=F)
+write.csv(qtl_summary.lm.round, "tables/qtl_summary_lm_ROUNDED.csv", row.names = F, quote=F)
+

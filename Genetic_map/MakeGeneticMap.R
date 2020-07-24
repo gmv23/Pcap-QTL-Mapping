@@ -76,7 +76,7 @@ plotRF(squash)
 dev.off()
 
 ###### Use ASMap to reorder markers within each linkage group
-squash.mst <- convert2bcsft(squash, BC.gen = 0, F.gen = 0, error.prob = 0.003)
+squash.mst <- convert2bcsft(squash, BC.gen = 0, F.gen = 0, error.prob = 0.001)
 squash.mst <- mstmap.cross(squash.mst, id='Sample', bychr=T, p.value=2, dist.fun="kosambi")
 
 #Invert all marker orders so genetic and physical maps are in same orientation
@@ -123,11 +123,14 @@ for(i in 1:20){
 par(old.par)
 dev.off()
 
-squash.mst <- calc.genoprob(squash, step=1, error.prob = .003, map.function = "kosambi", stepwidth = "fixed")
+squash.mst <- calc.genoprob(squash.mst, step=1, error.prob = .003, map.function = "kosambi", stepwidth = "fixed")
 
 saveRDS(squash.mst, "squash_map.rds")
 
-
+#Write genetic map as table
+gen_map <- pull.map(squash.mst, as.table=T)
+gen_map$pos <- round(gen_map$pos,2)
+write.csv(gen_map, "tables/gen_map.csv", row.names = T, quote=F)
 
 
 

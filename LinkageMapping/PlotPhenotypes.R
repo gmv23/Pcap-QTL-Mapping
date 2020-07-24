@@ -1,5 +1,6 @@
 setwd("~/Documents/work/Smart_lab/P_capsici/QTL_mapping/LinkageMapping/")
-
+library(agricolae)
+library(RColorBrewer)
 ####################################     Import and clean data    #################################
 
 blues <- read.csv("../F23/tables/f23_blues.csv", stringsAsFactors = F)
@@ -187,3 +188,7 @@ for(i in 1:5){
 
 par(old.par)
 dev.off()
+
+sum(blues.f2$raudpc > blues$raudpc[which.dunja])
+sum(blues.f2$raudpc < blues$raudpc[which.pcny21])
+
