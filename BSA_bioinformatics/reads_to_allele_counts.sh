@@ -62,5 +62,6 @@ if [ ! -d allele_counts ]; then
 	cd allele_counts
 	cp "$SCRIPTS"/get_allele_counts.py .
 	python get_allele_counts.py ../variants/final_geno_snps.recode.vcf allele_counts.txt
+	python get_allele_counts.py ../variants/final_geno.vcf allele_counts_all_variants.txt
 	cd ..
 fi
