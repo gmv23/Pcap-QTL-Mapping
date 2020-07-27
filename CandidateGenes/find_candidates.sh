@@ -53,4 +53,24 @@ join -t $'\t' -e NA -a 1 -o 1.1 1.2 1.3 1.4 1.5 1.6 1.7 1.8 1.9 2.3 tmp/candidat
 #Join GO terms for each gene with ; and then add GO terms
 python /workdir/gmv23/squashQTL/Pcap-QTL-Mapping/CandidateGenes/go_skinny_to_fat.py Cpepo_GO_anno.txt tmp/go_fat.txt
 sort -k 1 tmp/go_fat.txt > tmp/go_fat_sorted.txt
-join -t $'\t' -e NA -a 1 -o 1.1 1.2 1.3 1.4 1.5 1.6 1.7 1.8 1.9 2.3 tmp/candidate_genes5.txt tmp/go_fat_sorted.txt > candidate_genes_list.txt
+join -t $'\t' -e NA -a 1 -o 1.1 1.2 1.3 1.4 1.5 1.6 1.7 1.8 1.9 1.10 2.2 tmp/candidate_genes5.txt tmp/go_fat_sorted.txt > candidate_genes_list.txt
+
+################## Now get counts of genes that meet certain requirements ##################
+candidates=candidate_gene_list.txt
+chroms=$(cut -f2 $candidates | sort | uniq)
+
+echo -e "CHROM/tGENES\tGENES_MODERATE\tGENES_HIGH\tGENES_DE\tGENES_HIGH_DE" >> gene_counts.txt
+
+for chrom in $chroms
+	do
+	n_genes=$(grep $chrom $candidates | wc -l)
+	n_moderate=$(grep $chrom $candidates | awk '$6 > 0 || $7 > 0 {print $0}' | wc -l)
+	n_high=$(grep $chrom $candidates | awk '$7 > 0 {print $0}' | wc -l)
+	n_de=$(grep $chrom $candidates | awk '$8 == "TRUE" {print $0}' | wc -l)
+	n_high_and_de=$(grep $chrom $candidates | awk '$7 > 0 && $8 == "TRUE" {print $0}' | wc -l)
+	lines="$n_genes\t$n_moderate\t$n_high\t$n_de\t$n_high_and_de"
+	echo -e $lines >> gene_counts.txt
+done
+
+### Add header to candidate gene file
+sed -i '1 i\GENE\tCHROM\tSTART\tSTOP\tSTRAND\tVARIANTS_MOD_OR_HIGH\tVARIANTS_HIGH\tDE_MELON\tDESCRIPTION\tKOGG\tGO'
