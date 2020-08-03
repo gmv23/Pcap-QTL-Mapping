@@ -6,16 +6,16 @@
 
 #Use get_recip_hom.py script to BLAST C. pepo proteins against Cucumis melo proteins
 #And find reciprocal best homologs
-python /workdir/gmv23/squashQTL/Pcap-QTL-Mapping/CandidateGenes/get_recip_hom.py Cpepo_pep_v4.1.fa CM3.6.1_pep.fasta
+#python /workdir/gmv23/squashQTL/Pcap-QTL-Mapping/CandidateGenes/get_recip_hom.py Cpepo_pep_v4.1.fa CM3.6.1_pep.fasta
 
 #Filter VCF file with SNPs and INDELs to get high quality variants that are segregating
 #Also remove variants with MAF<0.20 to get rid of spurious variants that share position with retained position
 #MAF of 0.20 means minor allele called in at least 5 samples (pools or parents)
-vcftools --vcf ../bsa_bioinformatics_2020-04-30/variants/final_geno.vcf --positions hq_polymorphic_positions.txt --maf 0.20 --recode --out tmp/geno_poly
+#vcftools --vcf ../bsa_bioinformatics_2020-04-30/variants/final_geno.vcf --positions hq_polymorphic_positions.txt --maf 0.20 --recode --out tmp/geno_poly
 
 #Annotate variants
-java -jar /workdir/gmv23/bsa/candidates/snpEff-4.3/snpEff.jar Cp4.1 -v \
--c /workdir/gmv23/bsa/candidates/snpEff-4.3/snpEff.config tmp/geno_poly.recode.vcf > tmp/geno_anno.vcf
+#java -jar /workdir/gmv23/bsa/candidates/snpEff-4.3/snpEff.jar Cp4.1 -v \
+#-c /workdir/gmv23/bsa/candidates/snpEff-4.3/snpEff.config tmp/geno_poly.recode.vcf > tmp/geno_anno.vcf
 
 #Pull out genes from gff and sort
 awk '$3 == "gene"' Cpepo_gff_v4.1 | sed 's/\s/\t/g' | sed -r 's/^(.*?)ID=.*?Name=(.*?);/\1\2/' > tmp/gff_genes.gff
@@ -36,7 +36,7 @@ join tmp/candidate_genes0.txt tmp/gff_genes_sorted_by_gene.txt -1 2 -2 4 > tmp/c
 tail -n +3 snpEff_genes.txt | awk -v OFS='\t' '{print $1, $7, $5}' | sort -k 1 > tmp/variant_counts.txt
 
 #Add variant count information to gene summary
-join -e FALSE -a 1 -o 1.1 1.2 1.3 1.4 1.5 2.2 2.3 tmp/candidate_genes1.txt tmp/variant_counts.txt > tmp/candidate_genes2.txt
+join -e 0 -a 1 -o 1.1 1.2 1.3 1.4 1.5 2.2 2.3 tmp/candidate_genes1.txt tmp/variant_counts.txt > tmp/candidate_genes2.txt
 
 #Run python script that will cross-reference RBH file and melon DE file to add information 
 #on melon homologs and if theyre differentially expressed
@@ -56,10 +56,14 @@ sort -k 1 tmp/go_fat.txt > tmp/go_fat_sorted.txt
 join -t $'\t' -e NA -a 1 -o 1.1 1.2 1.3 1.4 1.5 1.6 1.7 1.8 1.9 1.10 2.2 tmp/candidate_genes5.txt tmp/go_fat_sorted.txt > candidate_genes_list.txt
 
 ################## Now get counts of genes that meet certain requirements ##################
-candidates=candidate_gene_list.txt
+candidates=candidate_genes_list.txt
 chroms=$(cut -f2 $candidates | sort | uniq)
 
-echo -e "CHROM/tGENES\tGENES_MODERATE\tGENES_HIGH\tGENES_DE\tGENES_HIGH_DE" >> gene_counts.txt
+if [ -f gene_counts.txt ]; then
+	rm gene_counts.txt
+fi
+
+echo -e "CHROM\tGENES\tGENES_MODERATE\tGENES_HIGH\tGENES_DE\tGENES_HIGH_DE" >> gene_counts.txt
 
 for chrom in $chroms
 	do
@@ -68,9 +72,13 @@ for chrom in $chroms
 	n_high=$(grep $chrom $candidates | awk '$7 > 0 {print $0}' | wc -l)
 	n_de=$(grep $chrom $candidates | awk '$8 == "TRUE" {print $0}' | wc -l)
 	n_high_and_de=$(grep $chrom $candidates | awk '$7 > 0 && $8 == "TRUE" {print $0}' | wc -l)
-	lines="$n_genes\t$n_moderate\t$n_high\t$n_de\t$n_high_and_de"
+	lines="$chrom\t$n_genes\t$n_moderate\t$n_high\t$n_de\t$n_high_and_de"
 	echo -e $lines >> gene_counts.txt
 done
 
+#Get rid of extra info in LG names
+sed -ri 's/Cp4.1LG0?//g' gene_counts.txt
+
 ### Add header to candidate gene file
-sed -i '1 i\GENE\tCHROM\tSTART\tSTOP\tSTRAND\tVARIANTS_MOD_OR_HIGH\tVARIANTS_HIGH\tDE_MELON\tDESCRIPTION\tKOGG\tGO'
+sed -i '1 i\GENE\tCHROM\tSTART\tSTOP\tSTRAND\tVARIANTS_MOD_OR_HIGH\tVARIANTS_HIGH\tDE_MELON\tDESCRIPTION\tKOGG\tGO' $candidates
+
