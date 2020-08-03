@@ -80,5 +80,5 @@ done
 sed -ri 's/Cp4.1LG0?//g' gene_counts.txt
 
 ### Add header to candidate gene file
-sed -i '1 i\GENE\tCHROM\tSTART\tSTOP\tSTRAND\tVARIANTS_MOD_OR_HIGH\tVARIANTS_HIGH\tDE_MELON\tDESCRIPTION\tKOGG\tGO' $candidates
+sed -i '1 i\GENE\tCHROM\tSTART\tSTOP\tSTRAND\tVARIANTS_MOD\tVARIANTS_HIGH\tDE_MELON\tDESCRIPTION\tKOGG\tGO' $candidates
 
