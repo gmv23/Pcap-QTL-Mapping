@@ -214,9 +214,10 @@ rownames(geno_f2_prune)[!rownames(geno_f2_prune) %in% blues$Sample]
 #1 sample with only geno data
 
 #Get phenos in geno order
-blues <- blues[match(rownames(geno_f2_prune), blues$Sample),]
+blues.f2 <- blues[match(rownames(geno_f2_prune), blues$Sample),]
 #Replace the duplicated samples phenotypes with NA
 blues[blues$Sample %in% clones_keep,2:6] <- NA
+blues.f2[blues.f2$Sample %in% clones_keep,2:6] <- NA
 
 #Get chromosomes as numbers
 chrom_numbers <- as.integer(gsub("Cp4.1LG", "", snps_prune$CHROM))
@@ -225,12 +226,14 @@ chrom_numbers <- as.integer(gsub("Cp4.1LG", "", snps_prune$CHROM))
 markers <- paste(chrom_numbers, snps_prune$BP, sep="_")
 
 #Put it all together
-header <- as.character(c(colnames(blues)[2:ncol(blues)], "Sample", markers))
-r1 <- as.character(c(rep("", ncol(blues)), chrom_numbers))
-body <- as.matrix(cbind(blues[,2:ncol(blues)], rownames(geno_f2_prune), geno_f2_prune))
+header <- as.character(c(colnames(blues.f2)[2:ncol(blues.f2)], "Sample", markers))
+r1 <- as.character(c(rep("", ncol(blues.f2)), chrom_numbers))
+body <- as.matrix(cbind(blues.f2[,2:ncol(blues.f2)], rownames(geno_f2_prune), geno_f2_prune))
 rqtl_geno <- rbind(r1,body)
 colnames(rqtl_geno) <- header
 
 #Save file
 write.csv(rqtl_geno, "tables/f2_geno_rqtl.csv", quote=F, row.names=F)
+#Save pheno file with NAs replacing the mismatched families
+write.csv(blues, "tables/blues_final.csv", quote=F, row.names=F)
 

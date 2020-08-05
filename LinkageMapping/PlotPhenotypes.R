@@ -3,8 +3,7 @@ library(agricolae)
 library(RColorBrewer)
 ####################################     Import and clean data    #################################
 
-blues <- read.csv("../F23/tables/f23_blues.csv", stringsAsFactors = F)
-colnames(blues)[1] <- "Sample"
+blues <- read.csv("../genetic_map/tables/blues_final.csv")
 
 geno <- read.csv("tables/qtl_marker_genotypes.csv", stringsAsFactors = F)
 colnames(geno)[1] <- "Sample"
@@ -81,9 +80,9 @@ hist(blues$raudpc[c(which.sel)],
      border=colors()[185],
      add=T)
 
-points(x=rep(median(blues$raudpc[which.ran]),25), y = seq(0,40,length.out = 25),
+points(x=rep(median(blues$raudpc[which.ran], na.rm=T),25), y = seq(0,40,length.out = 25),
        cex=0.7,bg=colors()[430], col=colors()[190], pch=22)
-points(x=rep(median(blues$raudpc[which.sel]),25), y = seq(0,40,length.out = 25),
+points(x=rep(median(blues$raudpc[which.sel], na.rm=T),25), y = seq(0,40,length.out = 25),
        cex=0.7,bg=colors()[630], col=colors()[190], pch=22)
 #Plot 2 legend
 par(xpd=NA)
@@ -151,7 +150,7 @@ for(i in 1:5){
           col=brewer.pal(3,"Dark2"),
           ylab = ylab, xlab=xlab,
           cex.lab=1.1,
-          ylim=c(min(blues.f2$raudpc),100),
+          ylim=c(min(blues.f2$raudpc, na.rm=T),100),
           yaxt = 's')
   
   #Add marker name
@@ -189,6 +188,6 @@ for(i in 1:5){
 par(old.par)
 dev.off()
 
-sum(blues.f2$raudpc > blues$raudpc[which.dunja])
-sum(blues.f2$raudpc < blues$raudpc[which.pcny21])
+sum(blues.f2$raudpc > blues$raudpc[which.dunja], na.rm = T)
+sum(blues.f2$raudpc < blues$raudpc[which.pcny21], na.rm = T)
 

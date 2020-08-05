@@ -43,7 +43,7 @@ CI.lm <- data.frame("Chrom" = stepwise.out$chr,
 for(i in 1:nrow(CI.lm)){
    ci <- bayesint(stepwise.out, qtl.index=i, expandtomarkers = T, prob=0.90)
    marker.pos <- find.marker(squash, chr=ci$chr, pos=ci$pos)
-   bp.pos <- as.integer(gsub("[0-9]?_","", marker.pos))
+   bp.pos <- as.integer(gsub("[0-9]+_","", marker.pos))
    ci.string <- paste(bp.pos[1],bp.pos[3],sep="-")
    CI.lm$Peak[i] <- bp.pos[2]
    CI.lm$CI[i] <- ci.string
@@ -92,6 +92,7 @@ GBS_markers_print <- BSA_markers[,c("CHROM", "GBS_BP", "distance", "AF_random", 
 GBS_markers_print$CHROM <- as.integer(gsub("Cp4.1LG","",as.character(GBS_markers_print$CHROM)))
 write.csv(GBS_markers_print, "tables/GBS_markers_print.csv", row.names = F, quote = F)
 write.csv(qtl_geno, "tables/qtl_marker_genotypes.csv", row.names = T, quote=F)
+write.csv(geno, "tables/imputed_genos.csv", row.names=T, quote=F)
 
 ####################################      Look at QTL effects for two models    #################################
 
