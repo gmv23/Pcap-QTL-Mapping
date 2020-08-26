@@ -148,13 +148,13 @@ plot_lg <- function(allele_freqs, #data frame with column for CHROM, POS, and fo
                                  xaxt = 'n', yaxt='n')
     total_plot_arguments[names(plot_arguments)] <- plot_arguments
     do.call(plot, total_plot_arguments, quote=T)
-    lines(chrom_results$POS, chrom_results[,paste("s", rep, sep="")], col='black', lwd='6')
-    lines(chrom_results$POS, chrom_results[,paste("s", rep, sep="")], col='#D55E00', lwd='4')
-    lines(chrom_results$POS, chrom_results[,paste("t", rep, sep="")], col='black', lwd='6')
-    lines(chrom_results$POS, chrom_results[,paste("t", rep, sep="")], col="#0072B2", lwd='4')
+    lines(chrom_results$POS, chrom_results[,paste("s", rep, sep="")], col='black', lwd='4.5')
+    lines(chrom_results$POS, chrom_results[,paste("s", rep, sep="")], col='#D55E00', lwd='2.5')
+    lines(chrom_results$POS, chrom_results[,paste("t", rep, sep="")], col='black', lwd='4.5')
+    lines(chrom_results$POS, chrom_results[,paste("t", rep, sep="")], col="#0072B2", lwd='2.5')
     if(rep==2){
-      lines(chrom_results$POS, chrom_results[,paste("r", rep, sep="")], col='black', lwd='6')
-      lines(chrom_results$POS, chrom_results[,paste("r", rep, sep="")], col='#CC79A2', lwd='4')
+      lines(chrom_results$POS, chrom_results[,paste("r", rep, sep="")], col='black', lwd='4.5')
+      lines(chrom_results$POS, chrom_results[,paste("r", rep, sep="")], col='#CC79A2', lwd='2.5')
     }
     if(x_axis == T){
       axis_positions <- seq(1,max(allele_freqs.long$POS), by=1000000)
@@ -292,7 +292,7 @@ chrom_summary <- data.frame("Chrom" = max_diff$CHROM,
                             "MaxLOD" = combine_reps(max_lods$S1_v_T1, max_lods$S2_v_T2),
                             "Pos_CI" = combine_reps(addCI(multi_peaks$Rep1_peak, multi_peaks$Rep1_start, multi_peaks$Rep1_end),
                                                     addCI(multi_peaks$Rep2_peak, multi_peaks$Rep2_start, multi_peaks$Rep2_end)),
-                            "MaxDeltaAF" = combine_reps(round(max_diff$DeltaAF_R1,2), round(max_diff$DeltaAF_R2,2)),
+                            "MaxDeltaAF" = combine_reps(max_diff$DeltaAF_R1, max_diff$DeltaAF_R2),
                             "Pos" = combine_reps(max_diff$Pos_R1, max_diff$Pos_R2))
 chrom_summary.round <- data.frame("Chrom" = max_diff$CHROM,
                           "MaxLOD" = combine_reps(max_lods$S1_v_T1, max_lods$S2_v_T2),
@@ -323,7 +323,13 @@ layout(m)
 par(mar=c(0.25,0,0.25,0))
 #Empty plot where some labels will go
 plot(0,xlim=c(0,10),ylim=c(0,10),type='n', xaxt='n',yaxt='n',bty='n', xlab='', ylab='')
-text(6,5, "Pc-NY21 Allele Frequency", srt=90, cex=1.2)
+text(5,5, "Pc-NY21 Allele Frequency", srt=90, cex=1.2)
+
+#Add letters
+par(xpd=NA)
+text(2.5,10.5, "A", cex=2)
+text(2.5,-5.5, "B", cex=2)
+par(xpd=F)
 
 par(mar=c(0.25,1,0.25,1))
 plot_lg(allele_freqs, scaffold_sizes, "Cp4.1LG04", 1, y_axis=T, trim_percent = 0.25)

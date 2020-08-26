@@ -32,8 +32,13 @@ stepwise.out <- stepwiseqtl(squash, penalties=pen, verbose=T,
                                keeplodprofile = T, keeptrace = T)
 
 #Plot LOD profile of QTL
-pdf("plots/MQM_LOD_profile.pdf", width=7, height=5)
-plotLodProfile(stepwise.out, ylab = "LOD")
+pdf("plots/MQM_LOD_profile.pdf", width=7, height=7)
+jpeg("plots/MQM_LOD_profile.jpeg", width=7, height=7, units="in", res=600)
+#Rename QTL for purpose of plot
+stepwise.out.rename <- stepwise.out
+stepwise.out.rename$name <- paste(stepwise.out.rename$name, "cM", sep=" ")
+names(attr(stepwise.out.rename, "lodprofile")) <- paste(names(attr(stepwise.out.rename, "lodprofile")), "cM", sep=" ")
+plotLodProfile(stepwise.out.rename, ylab = "LOD")
 dev.off()
 
 #Get 90% confidence intervals for QTL
@@ -51,6 +56,23 @@ for(i in 1:nrow(CI.lm)){
 #Hardcode in Chrom 4 CI; disjoint interval because of inversion in genetic map
 CI.lm$CI[1] <- "0-20944;8074112-8504971"
 
+#For comparison results --- look at LOD scores and CIs from 1D QTL scan
+#out.perm <- scanone(squash, n.perm=1000, pheno.col=5, verbose=FALSE)
+summary(out.perm)
+out.1d <- scanone(squash, pheno.col=5, method = "hk")
+plot(out.1d)
+
+CI.1d <- data.frame("Chrom" = stepwise.out$chr,
+                    "Peak" = NA,
+                    "CI" = NA)
+for(i in 1:nrow(CI.1d)){
+  ci <- bayesint(out.1d, chr=as.integer(as.character(CI.1d$Chrom))[i], expandtomarkers = T, prob=0.90)
+  marker.pos <- find.marker(squash, chr=ci$chr, pos=ci$pos)
+  bp.pos <- as.integer(gsub("[0-9]+_","", marker.pos))
+  ci.string <- paste(bp.pos[1],bp.pos[3],sep="-")
+  CI.1d$Peak[i] <- bp.pos[2]
+  CI.1d$CI[i] <- ci.string
+}
 ###################################      Find GBS markers closest to BSA peaks    #################################
 
 #Pull out imputed genotypes

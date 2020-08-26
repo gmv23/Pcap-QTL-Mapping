@@ -61,6 +61,12 @@ chisq_test <- function(x){
 }
 chisq <- apply(geno_f2, 1, chisq_test)
 hist(chisq)
+cols <- rep("red", nrow(geno_f2))
+cols[as.integer(gsub("Cp4.1LG","",snps$CHROM))%%2==1] <- "blue"
+plot(-log10(chisq), col=cols)
+abline(h=2)
+View(cbind(as.character(snps$CHROM), snps$BP, -log10(chisq), t(apply(geno_f2,1,table))))
+
 #Filter based on chisq p-value < .01
 chisq_filter <- chisq > .01
 geno_f2 <- geno_f2[chisq_filter,]

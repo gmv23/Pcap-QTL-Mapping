@@ -87,7 +87,7 @@ pdf("plots/accuracies.pdf", width=3.30709, height=4)
 old.par <- par(no.readonly = T)
 par(mgp=c(3,1,0), oma=c(7,4,2,0.5), mar=c(0,0,0,0), xpd=NA)
 plot(0, type='n',xaxt='n',yaxt='n',ylim=c(0,max(accuracies)), xlim=c(0.6,4.4),
-     xlab="", ylab='cor(predicted,observed)')
+     xlab="", ylab="Pearson's cor(predicted,observed)")
 par(xpd=T)
 for(i in seq(0,1,by=0.1)){
   abline(h=i, col='gray', lty=2)
