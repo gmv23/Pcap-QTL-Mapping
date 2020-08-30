@@ -71,7 +71,7 @@ for chrom in $chroms
 	n_moderate=$(grep $chrom $candidates | awk '$6 > 0 || $7 > 0 {print $0}' | wc -l)
 	n_high=$(grep $chrom $candidates | awk '$7 > 0 {print $0}' | wc -l)
 	n_de=$(grep $chrom $candidates | awk '$8 == "TRUE" {print $0}' | wc -l)
-	n_high_and_de=$(grep $chrom $candidates | awk '$7 > 0 && $8 == "TRUE" {print $0}' | wc -l)
+	n_high_and_de=$(grep $chrom $candidates | awk '($7 > 0 || $6 > 0) && $8 == "TRUE" {print $0}' | wc -l)
 	lines="$chrom\t$n_genes\t$n_moderate\t$n_high\t$n_de\t$n_high_and_de"
 	echo -e $lines >> gene_counts.txt
 done
