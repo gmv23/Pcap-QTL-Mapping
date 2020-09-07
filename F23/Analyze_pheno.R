@@ -66,6 +66,8 @@ for(i in 1:5){
   vg <- trait.var$vcov[1]
   ve <- trait.var$vcov[3]
   h2 <- vg/(vg + ve/n_harm)
+  h22 <- vg/(vg + ve)
+  print(paste(trait_name, h2, h22))
 
   #Fit fixed effects model
   pheno <- disease[,trait_columns[i]]

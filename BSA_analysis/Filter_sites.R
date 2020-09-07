@@ -278,11 +278,12 @@ summary(n_snps)
 # Markers will be filtered within pools and markers filtered within that pool will not be included in any comparison with that pool
 # Therefore there will be 8 files produced for each chromosome --- one for each pool for each of 4 comparisons
 
-rows_to_remove <- apply(allele_freqs[,c('s1', 't1')],1, function(x) any(is.na(x)))
-counts.filter <- counts.bi.collapse[!rows_to_remove,]
-write.table(counts.filter[,c("CHROM","POS", "s1_A1", "s1_A2", "t1_A1", "t1_A2")], 
-            'data/s1_v_t1_counts.txt',
-            quote = F, row.names = F, col.names = T)
+#Save table with 'unfiltered' allele counts (unfiltered within pools, but filtering steps that apply to all pools already performed)
+counts.clean <- counts.bi.collapse
+colnames(counts.clean) <- c("CHROM", "POS", "SUS1_A1", "SUS1_A2", "RES1_A1", "RES1_A2", "SUS2_A1", "SUS2_A2", "RES2_A1", "RES2_A2", "RAN2_A1", "RAN2_A2")
+write.table(counts.clean, 
+            'data/filtered_allele_counts.txt',
+            quote = F, row.names = F, col.names = T, sep="\t")
 
 for(chrom in unique(counts.bi.collapse$CHROM)){
   chrom <- as.character(chrom)

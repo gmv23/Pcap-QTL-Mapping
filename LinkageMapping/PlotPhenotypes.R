@@ -131,6 +131,7 @@ geno <- geno[match(blues.f2$Sample, geno$Sample),]
 
 for(i in 1:5){
   qtl.geno <- geno[,(i+1)]
+  qtl.geno <- as.factor(qtl.geno)
   #Get boxplot coordinates
   boxplot.data <- boxplot(blues.f2$raudpc~qtl.geno, plot=F)
   

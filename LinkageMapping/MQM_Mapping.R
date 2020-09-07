@@ -3,6 +3,7 @@ library(qtl)
 
 #Import squash genetic map 
 squash <- readRDS("../genetic_map/squash_map.rds")
+#squash$pheno$raudpc[163:181] <- NA #to look at results only using 'random' f23s
 
 #Import snps
 snps <- read.csv("../genetic_map/tables/snps_filter_prune.csv")

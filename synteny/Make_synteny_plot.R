@@ -17,15 +17,17 @@ colnames(Cp_sizes) <- c("Chrom", "Size")
 Cp_sizes$Chrom <- as.integer(gsub("Cp4.1LG", "", Cp_sizes$Chrom))
 Cp_sizes$ChromID <- paste("Cp", Cp_sizes$Chrom, sep="")
 
-#Subset syn blocks by statistical significance to only show most important?
+#Subset syn blocks by statistical significance to only show most important
 syn <- syn[syn$Score > 400,]
 
 
-pdf("plots/synteny_plot.pdf")
+jpeg("plots/synteny_plot.jpeg", res = 600, units="in", width=7, height=7)
 m <- rbind(c(1,1,2,2),c(4,3,3,4))
 layout(m)
 
+counter <- 0
 for(Cm_chrom in c(4,11,14)){
+  counter <- counter + 1
   plot_chroms <- rbind(Cm_sizes[Cm_sizes$Chrom==Cm_chrom,], Cp_sizes[Cp_sizes$Chrom!=0,])
   #Add y values with range (0,1)
   plot_chroms$y <- 1
@@ -52,7 +54,7 @@ for(Cm_chrom in c(4,11,14)){
                panel.fun = function(x,y){
                  circos.text(CELL_META$xcenter, CELL_META$ylim[2] + mm_y(2), CELL_META$sector.index)
                })
-  
+  legend("topleft", legend=LETTERS[counter], bty="n", cex=2)
   #Draw QTL regions
   qtl_plot <- qtl[qtl$Chrom %in% plot_chroms$ChromID,]
   for(i in 1:nrow(qtl_plot)){
