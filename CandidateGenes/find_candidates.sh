@@ -6,16 +6,21 @@
 
 #Use get_recip_hom.py script to BLAST C. pepo proteins against Cucumis melo proteins
 #And find reciprocal best homologs
-#python /workdir/gmv23/squashQTL/Pcap-QTL-Mapping/CandidateGenes/get_recip_hom.py Cpepo_pep_v4.1.fa CM3.6.1_pep.fasta
+python /workdir/gmv23/squashQTL/Pcap-QTL-Mapping/CandidateGenes/get_recip_hom.py Cpepo_pep_v4.1.fa CM3.6.1_pep.fasta
 
 #Filter VCF file with SNPs and INDELs to get high quality variants that are segregating
+#hq_polymorphic_positions.txt file is output by FilterParentalSites.R
 #Also remove variants with MAF<0.20 to get rid of spurious variants that share position with retained position
 #MAF of 0.20 means minor allele called in at least 5 samples (pools or parents)
-#vcftools --vcf ../bsa_bioinformatics_2020-04-30/variants/final_geno.vcf --positions hq_polymorphic_positions.txt --maf 0.20 --recode --out tmp/geno_poly
+vcftools --vcf ../bsa_bioinformatics_2020-04-30/variants/final_geno.vcf --positions hq_polymorphic_positions.txt --maf 0.20 --recode --out tmp/geno_poly
 
 #Annotate variants
-#java -jar /workdir/gmv23/bsa/candidates/snpEff-4.3/snpEff.jar Cp4.1 -v \
-#-c /workdir/gmv23/bsa/candidates/snpEff-4.3/snpEff.config tmp/geno_poly.recode.vcf > tmp/geno_anno.vcf
+java -jar /workdir/gmv23/bsa/candidates/snpEff-4.3/snpEff.jar Cp4.1 -v \
+-c /workdir/gmv23/bsa/candidates/snpEff-4.3/snpEff.config tmp/geno_poly.recode.vcf > tmp/geno_anno.vcf
+
+#Make clean version with only genotypes of correctly named parents to make sharable file
+vcftools --vcf tmp/geno_anno.vcf --indv B02_D25 --indv C02_15_6015 --recode-INFO-all --recode --out geno_parents_anno
+sed 's/B02_D25/Dunja/' geno_parents_anno.recode.vcf | sed 's/C02_15_6015/PcNY21/' > annotated_parent_genotypes.vcf
 
 #Pull out genes from gff and sort
 awk '$3 == "gene"' Cpepo_gff_v4.1 | sed 's/\s/\t/g' | sed -r 's/^(.*?)ID=.*?Name=(.*?);/\1\2/' > tmp/gff_genes.gff
