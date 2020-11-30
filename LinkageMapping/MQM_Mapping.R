@@ -33,7 +33,6 @@ stepwise.out <- stepwiseqtl(squash, penalties=pen, verbose=T,
                                keeplodprofile = T, keeptrace = T)
 
 #Plot LOD profile of QTL
-pdf("plots/MQM_LOD_profile.pdf", width=7, height=7)
 jpeg("plots/MQM_LOD_profile.jpeg", width=7, height=7, units="in", res=600)
 #Rename QTL for purpose of plot
 stepwise.out.rename <- stepwise.out

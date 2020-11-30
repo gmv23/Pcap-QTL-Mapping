@@ -27,7 +27,7 @@ for(i in 1:20){
 }
 
 #Make map and plot
-newmap <- est.map(squash, error.prob=0.003, map.function="kosambi")
+newmap <- est.map(squash, error.prob=0.001, map.function="kosambi")
 plotMap(newmap)
 #########################          FIX MARKER PLACEMENT PROBLEMS        ################################
 
@@ -123,7 +123,7 @@ for(i in 1:20){
 par(old.par)
 dev.off()
 
-squash.mst <- calc.genoprob(squash.mst, step=1, error.prob = .003, map.function = "kosambi", stepwidth = "fixed")
+squash.mst <- calc.genoprob(squash.mst, step=1, error.prob = .001, map.function = "kosambi", stepwidth = "fixed")
 
 saveRDS(squash.mst, "squash_map.rds")
 

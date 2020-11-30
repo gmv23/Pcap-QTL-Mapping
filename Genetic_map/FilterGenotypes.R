@@ -109,6 +109,10 @@ for(i in 1:nrow(clones)){
 }
 
 #There are 4 pairs of duplicated samples
+
+#What is the average genotyping error rate among these duplicated samples?
+1-mean(pairwise_concordance[clones])
+
 #For each one we will remove the genotype with the least missing data
 #And delete both of the phenotypic records later
 clones_keep <- rep(NA, 4)

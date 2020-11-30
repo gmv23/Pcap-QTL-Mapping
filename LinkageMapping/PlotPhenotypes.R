@@ -10,7 +10,7 @@ colnames(geno)[1] <- "Sample"
 
 ####################################     Plot phenotypic distributions    #################################
 
-pdf("plots/phenotypic_distributions.pdf", width=7, height = 6)
+pdf("plots/phenotypic_distributions.pdf", width=6.85089, height=5.872191)
 
 #Get plot layout
 m <- rbind(rep(c(1,1,2,3,3,4),each=5),

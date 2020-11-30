@@ -34,8 +34,7 @@ scaffold_sizes <- scaffold_sizes[scaffold_sizes$CHROM %in% chroms.qtl,]
 y_coords <- seq(100,0,length.out=6)
 
 
-#pdf("plots/QTL_positions.pdf", height=5, width=7)
-jpeg("plots/QTL_positions.jpeg", height = 5, width=7, units="in", res=500)
+pdf("plots/QTL_positions.pdf", height = 4.893493, width=6.85089)
 old.par <- par(no.readonly = T)
 par(mar=c(5,6,0,7), xpd=NA)
 plot(0, type='n',xlim=c(0,max(scaffold_sizes)),ylim=c(0,110),

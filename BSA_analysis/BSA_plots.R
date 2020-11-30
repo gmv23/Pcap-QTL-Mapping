@@ -309,7 +309,7 @@ write.csv(qtl_summary.round, "tables/BSA_results_round.csv", quote=F, row.names 
 
 ################### Make multipane plot with LOD scores and allele freqs on chroms 4,5,8,16 ######################################
 
-pdf("plots/BSA_results.pdf", width=7, height=6)
+pdf("plots/BSA_results.pdf", width=6.85089, height=5.872191)
 old.par <- par(no.readonly = T)
 par(oma=c(0.5,0,2,1))
 
